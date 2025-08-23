@@ -10,6 +10,11 @@ export class BoardView extends ItemView {
 	dragDropManager: DragDropManager;
 	selectedCards: Set<string> = new Set();
 	bulkActionMode: boolean = false;
+	
+	// Responsive resize properties
+	private resizeObserver: ResizeObserver | null = null;
+	private windowResizeHandler: (() => void) | null = null;
+	private workspaceLayoutHandler: (() => void) | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: CrystalBoardsPlugin, board: Board) {
 		super(leaf);
@@ -31,11 +36,124 @@ export class BoardView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
+		// Clean up any lingering elements from previous implementations
+		this.cleanupLegacyElements();
+		
 		await this.renderBoard();
+	}
+
+	/**
+	 * Clean up any lingering elements from previous implementations
+	 */
+	/**
+	 * Clean up any lingering elements from previous implementations
+	 */
+	private cleanupLegacyElements(): void {
+		// Remove any lingering width tooltips or stats modals
+		const legacySelectors = [
+			'.crystal-width-tooltip',
+			'.crystal-width-stats-modal',
+			'.crystal-width-apply-modal',
+			'.crystal-width-notice'
+		];
+		
+		legacySelectors.forEach(selector => {
+			const elements = document.querySelectorAll(selector);
+			elements.forEach(element => {
+				console.log(`Removing legacy element: ${selector}`);
+				element.remove();
+			});
+		});
+		
+		// Also check for any fixed positioned elements with width text content
+		const allFixedElements = document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
+		allFixedElements.forEach(element => {
+			const text = element.textContent?.trim();
+			if (text && text.includes('px') && text.includes('|')) {
+				console.log(`Removing lingering tooltip with text: ${text}`);
+				element.remove();
+			}
+		});
+	}
+
+	/**
+	 * Static method to immediately clean up legacy elements
+	 */
+	/**
+	 * Static method to immediately clean up legacy elements
+	 */
+	static cleanupPage(): void {
+		// Remove any lingering width tooltips or stats modals
+		const legacySelectors = [
+			'.crystal-width-tooltip',
+			'.crystal-width-stats-modal',
+			'.crystal-width-apply-modal',
+			'.crystal-width-notice'
+		];
+		
+		legacySelectors.forEach(selector => {
+			const elements = document.querySelectorAll(selector);
+			elements.forEach(element => {
+				console.log(`Removing legacy element: ${selector}`);
+				element.remove();
+			});
+		});
+		
+		// Also check for any fixed positioned elements with width text content
+		const allFixedElements = document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
+		allFixedElements.forEach(element => {
+			const text = element.textContent?.trim();
+			if (text && text.includes('px') && text.includes('|')) {
+				console.log(`Removing lingering tooltip with text: ${text}`);
+				element.remove();
+			}
+		});
+		
+		// Extra thorough cleanup - look for any elements containing "300px | 300px" pattern
+		const textNodes = document.createTreeWalker(
+			document.body,
+			NodeFilter.SHOW_TEXT
+		);
+		
+		const nodesToRemove: Element[] = [];
+		let node;
+		while (node = textNodes.nextNode()) {
+			if (node.textContent && /\d+px\s*\|\s*\d+px/.test(node.textContent)) {
+				const element = node.parentElement;
+				if (element) {
+					nodesToRemove.push(element);
+				}
+			}
+		}
+		
+		nodesToRemove.forEach(element => {
+			console.log(`Removing element with pattern text: ${element.textContent}`);
+			element.remove();
+		});
 	}
 
 	async onClose(): Promise<void> {
 		this.dragDropManager.disableDragAndDrop();
+		
+		console.log('🧹 Cleaning up CSS Grid resize observers');
+		
+		// Cleanup resize observers
+		if (this.resizeObserver) {
+			this.resizeObserver.disconnect();
+			this.resizeObserver = null;
+		}
+		
+		// Cleanup workspace event listeners
+		if (this.workspaceLayoutHandler) {
+			this.app.workspace.off('layout-change', this.workspaceLayoutHandler);
+			this.app.workspace.off('resize', this.workspaceLayoutHandler);
+			this.workspaceLayoutHandler = null;
+		}
+		
+		if (this.windowResizeHandler) {
+			window.removeEventListener('resize', this.windowResizeHandler);
+			this.windowResizeHandler = null;
+		}
 	}
 
 	async renderBoard(): Promise<void> {
@@ -116,13 +234,145 @@ export class BoardView extends ItemView {
 			await this.renderColumn(columnsContainer, column);
 		}
 
-
+		// Apply responsive column sizing
+		this.applyResponsiveColumnSizing(columnsContainer, sortedColumns.length);
+		
+		// Setup responsive resize handling
+		this.setupResponsiveResize(columnsContainer);
 
 		// Enable drag and drop after rendering
 		setTimeout(() => {
 			this.dragDropManager.enableDragAndDrop();
+			
+			// Force a resize calculation after everything is fully rendered
+			setTimeout(() => {
+				this.forceColumnResize();
+			}, 200);
 		}, 100);
 	}
+
+	/**
+	 * Apply responsive column sizing based on available space and column count
+	 */
+	/**
+	 * Apply responsive column sizing based on available space and column count
+	 */
+	/**
+	 * Apply responsive column sizing based on available space and column count
+	 */
+	/**
+	 * Apply responsive column sizing using CSS Grid
+	 */
+	private applyResponsiveColumnSizing(columnsContainer: HTMLElement, columnCount: number): void {
+		// Ensure we have a valid container and column count
+		if (!columnsContainer || columnCount === 0) {
+			console.log('❌ No valid container or columns');
+			return;
+		}
+
+		console.log(`🎯 Setting grid columns: ${columnCount} columns with equal distribution`);
+		
+		// Set CSS custom property for grid-template-columns
+		columnsContainer.style.setProperty('--column-count', columnCount.toString());
+		
+		// For mobile/small screens, switch to horizontal scroll when columns get too narrow
+		const containerWidth = columnsContainer.getBoundingClientRect().width || window.innerWidth;
+		const minColumnWidth = 280;
+		const totalMinWidth = columnCount * minColumnWidth + (columnCount - 1) * 16; // 16px gap
+		
+		if (containerWidth < totalMinWidth) {
+			console.log('📱 Switching to horizontal scroll for narrow screen');
+			columnsContainer.style.gridTemplateColumns = `repeat(${columnCount}, ${minColumnWidth}px)`;
+		} else {
+			console.log('🖥️ Using equal distribution grid layout');
+			columnsContainer.style.gridTemplateColumns = `repeat(${columnCount}, 1fr)`;
+		}
+
+		console.log(`✅ Applied CSS Grid: ${columnCount} columns, container: ${containerWidth.toFixed(0)}px`);
+	}
+
+	/**
+	 * Setup resize observer for dynamic column sizing
+	 */
+	/**
+	 * Setup resize observer for dynamic column sizing
+	 */
+	/**
+	 * Setup resize observer for dynamic column sizing
+	 */
+	/**
+	 * Setup simple resize handling for CSS Grid layout
+	 */
+	private setupResponsiveResize(columnsContainer: HTMLElement): void {
+		console.log('🔧 Setting up CSS Grid responsive layout');
+		
+		// Clean up existing observers
+		if (this.resizeObserver) {
+			this.resizeObserver.disconnect();
+		}
+
+		// Simple resize observer for container changes
+		this.resizeObserver = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				const columnCount = this.board.columns.length;
+				this.applyResponsiveColumnSizing(entry.target as HTMLElement, columnCount);
+			}
+		});
+
+		this.resizeObserver.observe(columnsContainer);
+
+		// Listen for Obsidian workspace changes
+		if (!this.workspaceLayoutHandler) {
+			this.workspaceLayoutHandler = () => {
+				setTimeout(() => {
+					const columnCount = this.board.columns.length;
+					this.applyResponsiveColumnSizing(columnsContainer, columnCount);
+				}, 100);
+			};
+			
+			this.app.workspace.on('layout-change', this.workspaceLayoutHandler);
+			this.app.workspace.on('resize', this.workspaceLayoutHandler);
+		}
+
+		// Window resize backup
+		if (!this.windowResizeHandler) {
+			this.windowResizeHandler = () => {
+				const columnCount = this.board.columns.length;
+				this.applyResponsiveColumnSizing(columnsContainer, columnCount);
+			};
+			window.addEventListener('resize', this.windowResizeHandler);
+		}
+	}
+
+
+
+	/**
+	 * Refresh column sizing without full re-render
+	 */
+	private refreshColumnSizing(): void {
+		const columnsContainer = this.contentEl.querySelector('.crystal-board-columns') as HTMLElement;
+		if (columnsContainer) {
+			const columnCount = this.board.columns.length;
+			this.applyResponsiveColumnSizing(columnsContainer, columnCount);
+		}
+	}
+
+	/**
+	 * Force immediate column sizing refresh - can be called manually
+	 */
+	public forceColumnResize(): void {
+		console.log('🔄 Forcing column resize...');
+		const columnsContainer = this.contentEl.querySelector('.crystal-board-columns') as HTMLElement;
+		if (columnsContainer) {
+			const columnCount = this.board.columns.length;
+			// Use a longer delay to ensure everything is rendered
+			setTimeout(() => {
+				this.applyResponsiveColumnSizing(columnsContainer, columnCount);
+			}, 300);
+		}
+	}
+
+
 
 	async renderColumn(container: HTMLElement, column: Column): Promise<void> {
 		const columnEl = container.createEl('div', { 
@@ -181,6 +431,8 @@ export class BoardView extends ItemView {
 		});
 		addCardBtn.onclick = () => this.openAddCardModal(column.id);
 	}
+
+
 
 	async renderCard(container: HTMLElement, card: Card, columnId: string): Promise<void> {
 		const cardEl = container.createEl('div', { 
@@ -530,7 +782,8 @@ export class BoardView extends ItemView {
 			const updatedBoard = this.plugin.dataManager.getBoardById(this.board.id);
 			if (updatedBoard) {
 				this.board = updatedBoard;
-				this.renderBoard();
+				await this.renderBoard(); // Full re-render needed to remove column
+				// Column sizing will be applied automatically by renderBoard
 			}
 		}
 	}
@@ -584,7 +837,8 @@ export class BoardView extends ItemView {
 		const updatedBoard = this.plugin.dataManager.getBoardById(this.board.id);
 		if (updatedBoard) {
 			this.board = updatedBoard;
-			this.renderBoard();
+			await this.renderBoard(); // Full re-render needed to add new column
+			// Column sizing will be applied automatically by renderBoard
 		}
 	}
 
@@ -593,7 +847,8 @@ export class BoardView extends ItemView {
 		const updatedBoard = this.plugin.dataManager.getBoardById(this.board.id);
 		if (updatedBoard) {
 			this.board = updatedBoard;
-			this.renderBoard();
+			await this.renderBoard(); // Full re-render needed to update column content
+			// Column sizing will be applied automatically by renderBoard
 		}
 	}
 

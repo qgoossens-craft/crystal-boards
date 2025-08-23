@@ -694,17 +694,22 @@
 }
 
 .crystal-board-columns {
-	display: flex;
+	display: grid;
 	gap: 1rem;
 	height: calc(100vh - 200px);
 	overflow-x: auto;
 	overflow-y: hidden;
 	padding-bottom: 1rem;
+	/* Dynamic grid columns - set by JavaScript */
+	grid-template-columns: repeat(var(--column-count, 3), 1fr);
+	/* Minimum column width to prevent too narrow columns */
+	grid-auto-columns: minmax(280px, 1fr);
 }
 
 /* Columns */
 .crystal-column {
-	flex: 0 0 300px;
+	/* Grid item - no flex needed, grid handles sizing */
+	min-width: 280px;
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
@@ -713,6 +718,15 @@
 	flex-direction: column;
 	max-height: 100%;
 	position: relative;
+}
+
+/* Simple responsive behavior for very small screens */
+@media (max-width: 900px) {
+	.crystal-board-columns {
+		/* On mobile, use horizontal scroll with fixed column widths */
+		grid-template-columns: repeat(var(--column-count, 3), 300px) !important;
+		overflow-x: auto;
+	}
 }
 
 .crystal-column-header {
