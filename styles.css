@@ -57,9 +57,11 @@
 /* Dashboard Grid */
 .crystal-boards-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	/* grid-template-columns set dynamically by JavaScript based on boardsPerRow setting */
 	gap: 1rem;
 	margin-top: 1rem;
+	/* Ensure cards don't get too small on large screens */
+	grid-auto-rows: max-content;
 }
 
 /* Empty State */
@@ -456,7 +458,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
 	.crystal-boards-grid {
-		grid-template-columns: 1fr;
+		grid-template-columns: 1fr !important; /* Override the dynamic setting on mobile */
 		gap: 1rem;
 	}
 	
@@ -468,6 +470,21 @@
 	
 	.crystal-boards-title {
 		text-align: center;
+	}
+}
+
+/* Tablet responsive - reduce columns if setting is too high */
+@media (max-width: 1024px) {
+	.crystal-boards-grid {
+		/* Limit to max 3 columns on tablets */
+		grid-template-columns: repeat(min(3, var(--boards-per-row, 3)), 1fr) !important;
+	}
+}
+
+@media (max-width: 900px) {
+	.crystal-boards-grid {
+		/* Limit to max 2 columns on smaller tablets */
+		grid-template-columns: repeat(min(2, var(--boards-per-row, 3)), 1fr) !important;
 	}
 }
 

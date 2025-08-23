@@ -109,8 +109,22 @@ export default class CrystalBoardsPlugin extends Plugin {
 	}
 
 	async updateSettings(newSettings: Partial<PluginSettings>): Promise<void> {
+		const oldSettings = { ...this.settings };
 		await this.dataManager.updateSettings(newSettings);
 		this.settings = this.dataManager.getSettings();
+		
+		// Refresh dashboard if boardsPerRow or showCoverImages changed
+		if (newSettings.boardsPerRow !== undefined && newSettings.boardsPerRow !== oldSettings.boardsPerRow ||
+			newSettings.showCoverImages !== undefined && newSettings.showCoverImages !== oldSettings.showCoverImages) {
+			
+			// Find and refresh dashboard view
+			const dashboardLeaves = this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE);
+			for (const leaf of dashboardLeaves) {
+				if (leaf.view instanceof DashboardView) {
+					await leaf.view.renderDashboard();
+				}
+			}
+		}
 	}
 
 	async openBoard(board: Board): Promise<void> {
@@ -126,8 +140,8 @@ export default class CrystalBoardsPlugin extends Plugin {
 		let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
 		
 		if (!leaf) {
-			// If no dashboard leaf exists, use the active leaf
-			leaf = workspace.activeLeaf;
+			// If no dashboard leaf exists, create a new leaf
+			leaf = workspace.getLeaf();
 		}
 		
 		if (leaf) {

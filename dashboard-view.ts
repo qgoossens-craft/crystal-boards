@@ -39,11 +39,10 @@ export class DashboardView extends ItemView {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		// Header
 		const headerEl = contentEl.createEl('div', { cls: 'crystal-boards-header' });
 		// Create editable title
 		const titleEl = headerEl.createEl('h1', { cls: 'crystal-boards-title' });
-		this.renderEditableTitle(titleEl);
+		titleEl.createEl('span', { text: 'Crystal Boards' });
 		
 		const createBoardBtn = headerEl.createEl('button', {
 			text: 'Create Board',
@@ -51,8 +50,15 @@ export class DashboardView extends ItemView {
 		});
 		createBoardBtn.onclick = () => this.openCreateBoardModal();
 
-		// Boards grid
+		// Boards grid with dynamic columns based on setting
 		const boardsContainer = contentEl.createEl('div', { cls: 'crystal-boards-grid' });
+		
+		// Apply the boardsPerRow setting dynamically
+		const boardsPerRow = this.plugin.settings.boardsPerRow || 3;
+		boardsContainer.style.gridTemplateColumns = `repeat(${boardsPerRow}, 1fr)`;
+		
+		// Set CSS custom property for responsive design
+		boardsContainer.style.setProperty('--boards-per-row', boardsPerRow.toString());
 		
 		const boards = await this.plugin.dataManager.getBoards();
 		
@@ -327,8 +333,7 @@ export class DashboardView extends ItemView {
 			const newTitle = input.value.trim() || 'Crystal Boards';
 			
 			// Update settings
-			this.plugin.settings.customPluginName = newTitle;
-			await this.plugin.saveSettings();
+			await this.plugin.updateSettings({ customPluginName: newTitle });
 			
 			// Update display
 			titleText.textContent = newTitle;
@@ -1415,6 +1420,19 @@ class EditBoardModal extends Modal {
 			}
 		} else {
 			this.previewEl = null;
+		}
+	}
+
+	private updatePreview(): void {
+		if (this.previewEl && this.coverImage) {
+			const file = this.app.vault.getAbstractFileByPath(this.coverImage);
+			if (file instanceof TFile) {
+				const url = this.app.vault.getResourcePath(file);
+				this.previewEl.style.backgroundImage = `url(${url})`;
+				this.previewEl.style.backgroundSize = 'cover';
+				this.previewEl.style.backgroundRepeat = 'no-repeat';
+				this.previewEl.style.backgroundPosition = `center ${this.coverImagePosition}%`;
+			}
 		}
 	}
 
