@@ -1790,18 +1790,65 @@
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
-	padding: 12px;
+	padding: 0;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	font-size: 0.8rem;
 	line-height: 1.4;
 	color: var(--text-normal);
-	max-height: 300px;
-	overflow-y: auto;
+	max-height: 400px;
+	overflow: hidden;
 	backdrop-filter: blur(10px);
+	display: flex;
+	flex-direction: column;
+	pointer-events: auto;
+	user-select: text;
+}
+
+.crystal-note-preview-header {
+	padding: 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	font-weight: 600;
+	color: var(--text-normal);
+	background: var(--background-secondary);
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-radius: 8px 8px 0 0;
+}
+
+.crystal-note-preview-scroll-indicator {
+	font-size: 0.7rem;
+	color: var(--text-muted);
+	opacity: 0.7;
 }
 
 .crystal-note-preview-content {
-	/* Inherit Obsidian's markdown styling */
+	padding: 12px;
+	overflow-y: auto;
+	flex: 1;
+	/* Custom scrollbar for better UX */
+	pointer-events: auto;
+	user-select: text;
+	cursor: default;
+}
+
+.crystal-note-preview-content::-webkit-scrollbar {
+	width: 6px;
+}
+
+.crystal-note-preview-content::-webkit-scrollbar-track {
+	background: var(--background-modifier-border);
+	border-radius: 3px;
+}
+
+.crystal-note-preview-content::-webkit-scrollbar-thumb {
+	background: var(--interactive-accent);
+	border-radius: 3px;
+}
+
+.crystal-note-preview-content::-webkit-scrollbar-thumb:hover {
+	background: var(--interactive-accent-hover);
 }
 
 .crystal-note-preview-content h1,

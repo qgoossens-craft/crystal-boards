@@ -346,7 +346,8 @@ export class BoardView extends ItemView {
 				try {
 					console.log('Creating preview for:', file.basename);
 					const content = await this.app.vault.read(file);
-					let previewContent = content.length > 400 ? content.substring(0, 400) + '...' : content;
+					// Show full content for scrolling
+					let previewContent = content;
 					
 					// Remove existing preview
 					if (previewEl) {
@@ -357,9 +358,39 @@ export class BoardView extends ItemView {
 						cls: 'crystal-note-preview-popup'
 					});
 					
+					// Create header with note name and scroll indicator
+					const headerEl = previewEl.createEl('div', {
+						cls: 'crystal-note-preview-header'
+					});
+					headerEl.createEl('span', { text: file.basename });
+					const scrollIndicator = headerEl.createEl('span', { 
+						cls: 'crystal-note-preview-scroll-indicator',
+						text: '↕ Scroll'
+					});
+					
 					// Create a container for the rendered markdown
 					const contentContainer = previewEl.createEl('div', {
 						cls: 'crystal-note-preview-content'
+					});
+					
+					// Add scroll event listener to show/hide scroll indicator
+					contentContainer.addEventListener('scroll', () => {
+						const isScrollable = contentContainer.scrollHeight > contentContainer.clientHeight;
+						const isAtBottom = contentContainer.scrollTop + contentContainer.clientHeight >= contentContainer.scrollHeight - 5;
+						const isAtTop = contentContainer.scrollTop <= 5;
+						
+						if (!isScrollable) {
+							scrollIndicator.style.opacity = '0';
+						} else if (isAtBottom) {
+							scrollIndicator.textContent = '↑ Scroll up';
+							scrollIndicator.style.opacity = '0.7';
+						} else if (isAtTop) {
+							scrollIndicator.textContent = '↓ More below';
+							scrollIndicator.style.opacity = '0.7';
+						} else {
+							scrollIndicator.textContent = '↕ Scroll';
+							scrollIndicator.style.opacity = '0.7';
+						}
 					});
 					
 					// Render markdown using Obsidian's renderer
@@ -374,6 +405,11 @@ export class BoardView extends ItemView {
 						contentContainer.textContent = 'Empty note';
 					}
 					
+					// Trigger scroll event to set initial indicator state
+					setTimeout(() => {
+						contentContainer.dispatchEvent(new Event('scroll'));
+					}, 10);
+					
 					// Position the preview near the element
 					const rect = element.getBoundingClientRect();
 					previewEl.style.position = 'fixed';
@@ -381,6 +417,21 @@ export class BoardView extends ItemView {
 					previewEl.style.top = `${rect.bottom + 10}px`;
 					previewEl.style.zIndex = '10000';
 					previewEl.style.maxWidth = '350px';
+					
+					// Add hover events to keep preview open when mouse is over it
+					previewEl.addEventListener('mouseenter', () => {
+						console.log('Mouse entered preview');
+					});
+					
+					previewEl.addEventListener('mouseleave', () => {
+						console.log('Mouse left preview');
+						setTimeout(() => {
+							if (previewEl) {
+								previewEl.remove();
+								previewEl = null;
+							}
+						}, 100);
+					});
 					
 					console.log('Preview created and positioned');
 					
@@ -393,13 +444,39 @@ export class BoardView extends ItemView {
 					previewEl = document.body.createEl('div', {
 						cls: 'crystal-note-preview-popup'
 					});
-					previewEl.textContent = 'Error loading note preview';
+					
+					// Create header for error preview
+					const errorHeaderEl = previewEl.createEl('div', {
+						cls: 'crystal-note-preview-header'
+					});
+					errorHeaderEl.createEl('span', { text: file.basename });
+					
+					// Create content container for error
+					const errorContentEl = previewEl.createEl('div', {
+						cls: 'crystal-note-preview-content'
+					});
+					errorContentEl.textContent = 'Error loading note preview';
 					
 					const rect = element.getBoundingClientRect();
 					previewEl.style.position = 'fixed';
 					previewEl.style.left = `${rect.left}px`;
 					previewEl.style.top = `${rect.bottom + 10}px`;
 					previewEl.style.zIndex = '10000';
+					
+					// Add hover events to error preview as well
+					previewEl.addEventListener('mouseenter', () => {
+						console.log('Mouse entered error preview');
+					});
+					
+					previewEl.addEventListener('mouseleave', () => {
+						console.log('Mouse left error preview');
+						setTimeout(() => {
+							if (previewEl) {
+								previewEl.remove();
+								previewEl = null;
+							}
+						}, 100);
+					});
 				}
 			}, 500); // 500ms delay before showing preview
 		});
@@ -411,10 +488,14 @@ export class BoardView extends ItemView {
 				clearTimeout(hoverTimeout);
 				hoverTimeout = null;
 			}
-			if (previewEl) {
-				previewEl.remove();
-				previewEl = null;
-			}
+			
+			// Only hide after a short delay to allow moving to preview
+			setTimeout(() => {
+				if (previewEl && !previewEl.matches(':hover')) {
+					previewEl.remove();
+					previewEl = null;
+				}
+			}, 100);
 		});
 	}
 
