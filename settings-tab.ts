@@ -65,6 +65,71 @@ export class CrystalBoardsSettingTab extends PluginSettingTab {
 					}));
 		});
 
+		// Task extraction section
+		containerEl.createEl('h3', { text: 'Task Extraction' });
+		containerEl.createEl('p', { 
+			text: 'Configure automatic task extraction from your notes into boards.',
+			cls: 'setting-item-description'
+		});
+
+		new Setting(containerEl)
+			.setName('Task Source Note')
+			.setDesc('Path to the note containing tasks to extract (e.g., "Todo.md")')
+			.addText(text => text
+				.setPlaceholder('Todo.md')
+				.setValue(this.plugin.settings.taskSourcePath || '')
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ taskSourcePath: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Auto-extract on Startup')
+			.setDesc('Automatically extract tasks when the plugin loads')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoExtractOnStartup || false)
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ autoExtractOnStartup: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Extracted Task Prefix')
+			.setDesc('Prefix to add to extracted task titles (e.g., "📥 " or "[EXTRACTED] ")')
+			.addText(text => text
+				.setPlaceholder('📥 ')
+				.setValue(this.plugin.settings.extractedTaskPrefix || '')
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ extractedTaskPrefix: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Remove Extracted Tasks')
+			.setDesc('Remove tasks from source note after extracting them to boards')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.removeExtractedTasks || false)
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ removeExtractedTasks: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Default Board for Untagged Tasks')
+			.setDesc('Board name to use for tasks without matching tags')
+			.addText(text => text
+				.setPlaceholder('Inbox')
+				.setValue(this.plugin.settings.defaultExtractionBoard || 'Inbox')
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ defaultExtractionBoard: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Default Column for New Tasks')
+			.setDesc('Column name to place extracted tasks into')
+			.addText(text => text
+				.setPlaceholder('To Do')
+				.setValue(this.plugin.settings.extractionColumnName || 'To Do')
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ extractionColumnName: value });
+				}));
+
 		// Data management section
 		containerEl.createEl('h3', { text: 'Data Management' });
 

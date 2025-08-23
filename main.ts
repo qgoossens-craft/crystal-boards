@@ -2,12 +2,14 @@ import { Plugin } from 'obsidian';
 import { DashboardView } from './dashboard-view';
 import { BoardView } from './board-view';
 import { DataManager } from './data-manager';
+import { TaskExtractionService } from './task-extraction-service';
 import { PluginSettings, DASHBOARD_VIEW_TYPE, BOARD_VIEW_TYPE, Board } from './types';
 import { CrystalBoardsSettingTab } from './settings-tab';
 
 export default class CrystalBoardsPlugin extends Plugin {
 	settings: PluginSettings;
 	dataManager: DataManager;
+	taskExtractionService: TaskExtractionService;
 
 	async onload() {
 		console.log('Loading Crystal Boards plugin');
@@ -17,6 +19,9 @@ export default class CrystalBoardsPlugin extends Plugin {
 		await this.dataManager.loadData();
 		await this.dataManager.fixBoardPositions(); // Fix any position corruption
 		this.settings = this.dataManager.getSettings();
+
+		// Initialize task extraction service
+		this.taskExtractionService = new TaskExtractionService(this.app, this);
 
 		// Register views
 		this.registerView(
@@ -52,11 +57,27 @@ export default class CrystalBoardsPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'extract-tasks',
+			name: 'Extract Tasks from Source Note',
+			callback: async () => {
+				await this.taskExtractionService.quickExtract();
+			}
+		});
+
 		// Add settings tab
 		this.addSettingTab(new CrystalBoardsSettingTab(this.app, this));
 
 		// Ensure Kanban folder exists
 		await this.ensureKanbanFolderExists();
+
+		// Auto-extract tasks on startup if enabled
+		if (this.settings.autoExtractOnStartup) {
+			// Delay auto-extraction slightly to ensure everything is loaded
+			setTimeout(async () => {
+				await this.taskExtractionService.autoExtractOnStartup();
+			}, 1000);
+		}
 	}
 
 	onunload() {

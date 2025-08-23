@@ -81,6 +81,9 @@ export class DashboardView extends ItemView {
 				await this.renderBoardCard(boardsContainer, board);
 			}
 		}
+
+		// Add footer with Extract Tasks button
+		await this.renderDashboardFooter(contentEl);
 	}
 
 
@@ -218,6 +221,53 @@ export class DashboardView extends ItemView {
 			e.stopPropagation();
 			this.confirmDeleteBoard(board);
 		};
+	}
+
+	async renderDashboardFooter(container: HTMLElement): Promise<void> {
+		// Only show footer if task source is configured
+		if (!this.plugin.settings.taskSourcePath) {
+			return;
+		}
+
+		const footerEl = container.createEl('div', { cls: 'crystal-boards-footer' });
+		
+		// Extract Tasks button
+		const extractBtn = footerEl.createEl('button', {
+			cls: 'crystal-extract-tasks-btn',
+			text: '📥 Extract Tasks'
+		});
+
+		// Add tooltip/description
+		extractBtn.title = `Extract tasks from ${this.plugin.settings.taskSourcePath}`;
+		
+		// Button click handler
+		extractBtn.onclick = async () => {
+			extractBtn.disabled = true;
+			extractBtn.setText('⏳ Extracting...');
+			
+			try {
+				await this.plugin.taskExtractionService.quickExtract();
+				// Refresh dashboard to show new cards
+				await this.renderDashboard();
+			} catch (error) {
+				console.error('Task extraction failed:', error);
+				// Button will be re-enabled when dashboard re-renders
+			}
+		};
+
+		// Show extraction stats/info
+		try {
+			const stats = await this.plugin.taskExtractionService.getExtractionStats();
+			if (stats.tasksInSource > 0) {
+				const infoEl = footerEl.createEl('span', { 
+					cls: 'crystal-extract-info',
+					text: `${stats.tasksInSource} tasks available`
+				});
+				infoEl.title = `Found ${stats.tasksInSource} tasks in ${this.plugin.settings.taskSourcePath}`;
+			}
+		} catch (error) {
+			// Ignore stats errors, just won't show the count
+		}
 	}
 
 	openBoard(board: Board): void {

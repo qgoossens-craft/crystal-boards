@@ -52,12 +52,30 @@ export interface ResearchUrl {
 	created: number;
 }
 
+// Task extraction types
+export interface ExtractedTask {
+	text: string;
+	cleanText: string; // Text without tags and URLs
+	tags: string[];
+	urls: { url: string; title: string }[];
+	originalLine: string;
+	lineNumber: number;
+}
+
 export interface PluginSettings {
 	kanbanFolderPath: string;
 	defaultColumnColors: string[];
 	showCoverImages: boolean;
 	boardsPerRow: number;
 	customPluginName: string;
+	// Task extraction settings
+	taskSourcePath?: string;
+	autoExtractOnStartup?: boolean;
+	extractedTaskPrefix?: string;
+	removeExtractedTasks?: boolean;
+	tagMappingOverrides?: Record<string, string>;
+	defaultExtractionBoard?: string;
+	extractionColumnName?: string;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -65,7 +83,15 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	defaultColumnColors: ['#e3f2fd', '#f3e5f5', '#e8f5e8', '#fff3e0', '#ffebee'],
 	showCoverImages: true,
 	boardsPerRow: 3,
-	customPluginName: 'Crystal Boards'
+	customPluginName: 'Crystal Boards',
+	// Task extraction defaults
+	taskSourcePath: '',
+	autoExtractOnStartup: false,
+	extractedTaskPrefix: '📥 ',
+	removeExtractedTasks: false,
+	tagMappingOverrides: {},
+	defaultExtractionBoard: 'Inbox',
+	extractionColumnName: 'To Do'
 };
 
 // View types

@@ -2292,3 +2292,77 @@
 	gap: 0.5rem;
 }
 
+/* Dashboard Footer Styles */
+.crystal-boards-footer {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 1rem;
+	margin-top: 2rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Extract Tasks Button */
+.crystal-extract-tasks-btn {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: 1px solid var(--interactive-accent);
+	border-radius: 8px;
+	padding: 0.75rem 1.25rem;
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.crystal-extract-tasks-btn:hover {
+	background: var(--interactive-accent-hover);
+	border-color: var(--interactive-accent-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.crystal-extract-tasks-btn:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.crystal-extract-tasks-btn:disabled {
+	background: var(--background-modifier-border);
+	color: var(--text-muted);
+	border-color: var(--background-modifier-border);
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
+/* Extract Info Text */
+.crystal-extract-info {
+	color: var(--text-muted);
+	font-size: 0.8rem;
+	font-weight: 500;
+	padding: 0.5rem 0.75rem;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	cursor: help;
+}
+
+/* Responsive adjustments for footer */
+@media (max-width: 768px) {
+	.crystal-boards-footer {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
+	}
+	
+	.crystal-extract-tasks-btn {
+		width: 100%;
+		justify-content: center;
+	}
+}
+
