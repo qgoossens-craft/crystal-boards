@@ -664,7 +664,7 @@ class ColumnModal extends Modal {
 	}
 }
 
-class CoverImageEditorModal extends Modal {
+export class CoverImageEditorModal extends Modal {
 	plugin: CrystalBoardsPlugin;
 	board: Board;
 	coverEl: HTMLElement;

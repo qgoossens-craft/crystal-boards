@@ -510,6 +510,7 @@ class EditBoardModal extends Modal {
 	coverImagePosition: number;
 	imageSearchResults: TFile[] = [];
 	allImageFiles: TFile[] = [];
+	previewEl: HTMLElement | null = null;
 
 	constructor(app: App, plugin: CrystalBoardsPlugin, board: Board, onSubmit: (board: Board) => void) {
 		super(app);
@@ -562,24 +563,12 @@ class EditBoardModal extends Modal {
 		// Search results container
 		imageSearchContainer.createEl('div', { cls: 'crystal-image-search-results' });
 
-		// Cover image alignment (only show if there's an image)
+		// Cover image preview (if there's an image)
+		this.createPreview(contentEl);
+
+		// Cover image positioning (only show if there's an image)
 		if (this.coverImage) {
-			new Setting(contentEl)
-				.setName('Cover Image Alignment')
-				.setDesc('Adjust how the cover image is positioned')
-				.addDropdown((dropdown) => {
-					dropdown.addOption('center', 'Center')
-						.addOption('top', 'Top')
-						.addOption('bottom', 'Bottom')
-						.addOption('left', 'Left')
-						.addOption('right', 'Right')
-						.setValue(this.coverImageAlignment)
-						.onChange((value) => {
-							this.coverImageAlignment = value;
-						});
-				});
-			
-			// Cover image vertical position
+			// Cover image vertical position with live preview
 			new Setting(contentEl)
 				.setName('Cover Image Vertical Position')
 				.setDesc('Fine-tune the vertical position of the image (0% = top, 100% = bottom)')
@@ -589,9 +578,45 @@ class EditBoardModal extends Modal {
 						.setDynamicTooltip()
 						.onChange((value) => {
 							this.coverImagePosition = value;
-							// Update preview if we add one
+							// Update live preview
+							if (this.previewEl) {
+								this.previewEl.style.backgroundPosition = `center ${value}%`;
+							}
 						});
 				});
+
+			// Add preset buttons for quick positioning
+			const presetsContainer = contentEl.createEl('div', { cls: 'crystal-position-presets' });
+			presetsContainer.createEl('h4', { text: 'Quick Positions' });
+			
+			const presetsGrid = presetsContainer.createEl('div', { cls: 'crystal-presets-grid' });
+			
+			const presets = [
+				{ name: 'Top', value: 0 },
+				{ name: 'Upper', value: 25 },
+				{ name: 'Center', value: 50 },
+				{ name: 'Lower', value: 75 },
+				{ name: 'Bottom', value: 100 }
+			];
+
+			for (const preset of presets) {
+				const presetBtn = presetsGrid.createEl('button', {
+					text: preset.name,
+					cls: 'crystal-preset-btn'
+				});
+				presetBtn.onclick = () => {
+					this.coverImagePosition = preset.value;
+					// Update slider
+					const sliderEl = contentEl.querySelector('input[type="range"]') as HTMLInputElement;
+					if (sliderEl) {
+						sliderEl.value = preset.value.toString();
+					}
+					// Update live preview
+					if (this.previewEl) {
+						this.previewEl.style.backgroundPosition = `center ${preset.value}%`;
+					}
+				};
+			}
 		}
 
 		new Setting(contentEl)
@@ -691,6 +716,25 @@ class EditBoardModal extends Modal {
 					this.updateSelectedImageDisplay(container);
 				};
 			}
+		}
+	}
+
+	private createPreview(contentEl: HTMLElement): void {
+		if (this.coverImage) {
+			const previewContainer = contentEl.createEl('div', { cls: 'crystal-cover-preview-container' });
+			previewContainer.createEl('h4', { text: 'Live Preview' });
+			this.previewEl = previewContainer.createEl('div', { cls: 'crystal-cover-preview' });
+			
+			const file = this.app.vault.getAbstractFileByPath(this.coverImage);
+			if (file instanceof TFile) {
+				const url = this.app.vault.getResourcePath(file);
+				this.previewEl.style.backgroundImage = `url(${url})`;
+				this.previewEl.style.backgroundSize = 'cover';
+				this.previewEl.style.backgroundRepeat = 'no-repeat';
+				this.previewEl.style.backgroundPosition = `center ${this.coverImagePosition}%`;
+			}
+		} else {
+			this.previewEl = null;
 		}
 	}
 
