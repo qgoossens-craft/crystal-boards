@@ -50,6 +50,18 @@ export interface ResearchUrl {
 	url: string;
 	description?: string;
 	created: number;
+	// Link archiving and status
+	status?: 'unread' | 'reading' | 'read' | 'archived';
+	notes?: string;
+	readDate?: number;
+	importance?: 'low' | 'medium' | 'high';
+	// Enhanced metadata (from LinkManager)
+	_enhanced?: {
+		category: string;
+		icon: string;
+		domain: string;
+		previewData?: any;
+	};
 }
 
 // Task extraction types

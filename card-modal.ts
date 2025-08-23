@@ -1,6 +1,8 @@
 import { App, Modal, Setting, TFile, MarkdownRenderer } from 'obsidian';
 import CrystalBoardsPlugin from './main';
 import { Card, TodoItem, ResearchUrl } from './types';
+import { LinkManager } from './link-manager';
+import { LinkPreviewManager } from './link-preview';
 
 export class CardModal extends Modal {
 	plugin: CrystalBoardsPlugin;
@@ -18,6 +20,8 @@ export class CardModal extends Modal {
 	
 	private noteSearchResults: TFile[] = [];
 	private allMarkdownFiles: TFile[] = [];
+	private linkManager: LinkManager;
+	private linkPreviewManager: LinkPreviewManager;
 
 	constructor(
 		app: App, 
@@ -44,6 +48,10 @@ export class CardModal extends Modal {
 		
 		// Load all markdown files for note search
 		this.allMarkdownFiles = this.app.vault.getMarkdownFiles();
+		
+		// Initialize link manager and preview
+		this.linkManager = new LinkManager(app);
+		this.linkPreviewManager = new LinkPreviewManager(app, this.linkManager);
 	}
 
 	onOpen(): void {
@@ -488,8 +496,38 @@ export class CardModal extends Modal {
 				value: url.url,
 				placeholder: 'https://...'
 			});
-			urlInput.onchange = () => {
-				this.cardResearchUrls[index].url = urlInput.value;
+			urlInput.onchange = async () => {
+				const newUrl = urlInput.value.trim();
+				this.cardResearchUrls[index].url = newUrl;
+				
+				// Auto-enhance URL if it looks like a valid URL and title is empty
+				if (newUrl && this.isValidUrl(newUrl) && !this.cardResearchUrls[index].title.trim()) {
+					try {
+						// Show loading state
+						titleInput.value = '⏳ Loading title...';
+						titleInput.disabled = true;
+						
+						// Enhance the URL
+						const metadata = await this.linkManager.enhanceUrl(newUrl);
+						
+						// Update title and description with enhanced data
+						this.cardResearchUrls[index].title = metadata.title;
+						this.cardResearchUrls[index].description = metadata.description;
+						
+						// Update UI
+						titleInput.value = metadata.title;
+						descInput.value = metadata.description;
+						titleInput.disabled = false;
+						
+						// Add category indicator
+						this.addCategoryIndicator(urlEl, metadata);
+						
+					} catch (error) {
+						console.warn('Failed to enhance URL:', error);
+						titleInput.value = '';
+						titleInput.disabled = false;
+					}
+				}
 			};
 			
 			const descInput = urlEl.createEl('input', {
@@ -513,7 +551,13 @@ export class CardModal extends Modal {
 				openBtn.onclick = () => {
 					window.open(url.url, '_blank');
 				};
+				
+				// Add hover preview
+				this.linkPreviewManager.addHoverPreview(openBtn, url.url);
 			}
+
+			// Add link status controls
+			this.addLinkStatusControls(urlEl, url, index);
 			
 			const removeBtn = actionsEl.createEl('button', {
 				text: '×',
@@ -549,6 +593,134 @@ export class CardModal extends Modal {
 
 	private generateId(): string {
 		return Math.random().toString(36).substr(2, 9);
+	}
+
+	/**
+	 * Check if a string is a valid URL
+	 */
+	private isValidUrl(url: string): boolean {
+		try {
+			new URL(url);
+			return url.startsWith('http://') || url.startsWith('https://');
+		} catch {
+			return false;
+		}
+	}
+
+	/**
+	 * Add category indicator to URL element
+	 */
+	private addCategoryIndicator(urlEl: HTMLElement, metadata: any): void {
+		// Remove existing category indicator if any
+		const existing = urlEl.querySelector('.crystal-url-category');
+		if (existing) {
+			existing.remove();
+		}
+
+		// Add new category indicator
+		const categoryEl = urlEl.createEl('div', { 
+			cls: 'crystal-url-category',
+			text: `${metadata.icon} ${metadata.category}`,
+			title: `Category: ${metadata.category} • Domain: ${metadata.domain}`
+		});
+		
+		// Insert category indicator after title input
+		const titleInput = urlEl.querySelector('.crystal-url-title');
+		if (titleInput && titleInput.nextSibling) {
+			urlEl.insertBefore(categoryEl, titleInput.nextSibling);
+		} else {
+			urlEl.appendChild(categoryEl);
+		}
+	}
+
+	/**
+	 * Add link status controls for reading progress and notes
+	 */
+	private addLinkStatusControls(urlEl: HTMLElement, url: ResearchUrl, index: number): void {
+		const statusContainer = urlEl.createEl('div', { cls: 'crystal-link-status' });
+
+		// Status buttons
+		const statusButtons = statusContainer.createEl('div', { cls: 'crystal-status-buttons' });
+		
+		const statuses = [
+			{ key: 'unread', label: '📋 To Read', color: 'var(--color-blue)' },
+			{ key: 'reading', label: '👀 Reading', color: 'var(--color-orange)' },
+			{ key: 'read', label: '✅ Read', color: 'var(--color-green)' },
+			{ key: 'archived', label: '📁 Archived', color: 'var(--color-purple)' }
+		];
+
+		const currentStatus = url.status || 'unread';
+
+		statuses.forEach(status => {
+			const btn = statusButtons.createEl('button', {
+				cls: `crystal-status-btn ${currentStatus === status.key ? 'active' : ''}`,
+				text: status.label,
+				attr: { 'data-status': status.key }
+			});
+			
+			if (currentStatus === status.key) {
+				btn.style.backgroundColor = status.color;
+				btn.style.color = 'white';
+			}
+
+			btn.onclick = () => {
+				// Update status
+				this.cardResearchUrls[index].status = status.key as any;
+				if (status.key === 'read' && !this.cardResearchUrls[index].readDate) {
+					this.cardResearchUrls[index].readDate = Date.now();
+				}
+
+				// Update UI
+				statusButtons.querySelectorAll('.crystal-status-btn').forEach(b => {
+					const btn = b as HTMLButtonElement;
+					btn.classList.remove('active');
+					btn.style.backgroundColor = '';
+					btn.style.color = '';
+				});
+				
+				btn.classList.add('active');
+				btn.style.backgroundColor = status.color;
+				btn.style.color = 'white';
+			};
+		});
+
+		// Importance selector
+		const importanceContainer = statusContainer.createEl('div', { cls: 'crystal-importance' });
+		importanceContainer.createEl('label', { text: 'Importance:', cls: 'crystal-label' });
+		
+		const importanceSelect = importanceContainer.createEl('select', { cls: 'crystal-importance-select' });
+		['low', 'medium', 'high'].forEach(level => {
+			const option = importanceSelect.createEl('option', { 
+				value: level,
+				text: level.charAt(0).toUpperCase() + level.slice(1)
+			});
+			if (url.importance === level) {
+				option.selected = true;
+			}
+		});
+		
+		importanceSelect.onchange = () => {
+			this.cardResearchUrls[index].importance = importanceSelect.value as any;
+		};
+
+		// Notes textarea
+		const notesContainer = statusContainer.createEl('div', { cls: 'crystal-notes' });
+		notesContainer.createEl('label', { text: 'Notes:', cls: 'crystal-label' });
+		
+		const notesTextarea = notesContainer.createEl('textarea', {
+			cls: 'crystal-notes-input',
+			placeholder: 'Add notes about this link...',
+			value: url.notes || ''
+		});
+		
+		notesTextarea.onchange = () => {
+			this.cardResearchUrls[index].notes = notesTextarea.value;
+		};
+
+		// Show/hide status controls based on whether URL exists
+		if (!url.url) {
+			statusContainer.style.display = 'none';
+		}
 	}
 
 	private createNoteHoverPreview(element: HTMLElement, file: TFile): void {

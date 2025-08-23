@@ -1,14 +1,17 @@
 import { App, TFile } from 'obsidian';
 import { ExtractedTask, Board, Card, Column, PluginSettings } from './types';
+import { LinkManager } from './link-manager';
 import CrystalBoardsPlugin from './main';
 
 export class TaskExtractor {
 	private app: App;
 	private plugin: CrystalBoardsPlugin;
+	private linkManager: LinkManager;
 
 	constructor(app: App, plugin: CrystalBoardsPlugin) {
 		this.app = app;
 		this.plugin = plugin;
+		this.linkManager = new LinkManager(app);
 	}
 
 	/**
@@ -194,9 +197,50 @@ export class TaskExtractor {
 	}
 
 	/**
-	 * Create a card from an extracted task
+	 * Enhance URLs from task with better metadata and categorization
 	 */
-	createCardFromTask(task: ExtractedTask): Card {
+	private async enhanceTaskUrls(urls: { url: string; title: string }[], timestamp: number): Promise<any[]> {
+		if (urls.length === 0) {
+			return [];
+		}
+
+		try {
+			// Enhance all URLs in parallel
+			const enhancedMetadata = await this.linkManager.enhanceUrls(urls);
+			
+			// Convert enhanced metadata to ResearchUrl format
+			return enhancedMetadata.map((metadata, index) => ({
+				id: `url-${timestamp}-${index}`,
+				title: metadata.title,
+				url: metadata.originalUrl,
+				description: metadata.description,
+				created: timestamp,
+				// Store additional metadata for future use
+				_enhanced: {
+					category: metadata.category,
+					icon: metadata.icon,
+					domain: metadata.domain,
+					previewData: metadata.previewData
+				}
+			}));
+		} catch (error) {
+			console.warn('Failed to enhance URLs, falling back to basic processing:', error);
+			
+			// Fallback to basic URL processing
+			return urls.map((urlData, index) => ({
+				id: `url-${timestamp}-${index}`,
+				title: urlData.title,
+				url: urlData.url,
+				description: '',
+				created: timestamp
+			}));
+		}
+	}
+
+	/**
+	 * Create a card from an extracted task (with enhanced URL processing)
+	 */
+	async createCardFromTask(task: ExtractedTask): Promise<Card> {
 		const settings = this.plugin.settings;
 		const now = Date.now();
 		
@@ -207,14 +251,8 @@ export class TaskExtractor {
 		const prefix = settings.extractedTaskPrefix || '';
 		const title = `${prefix}${task.cleanText}`;
 
-		// Convert URLs to ResearchUrls
-		const researchUrls = task.urls.map((urlData, index) => ({
-			id: `url-${now}-${index}`,
-			title: urlData.title,
-			url: urlData.url,
-			description: '',
-			created: now
-		}));
+		// Enhance URLs with better metadata and categorization
+		const researchUrls = await this.enhanceTaskUrls(task.urls, now);
 
 		return {
 			id: cardId,

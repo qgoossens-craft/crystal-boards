@@ -105,7 +105,7 @@ export class TaskExtractionService {
 
 		// Create cards from tasks and add to board
 		for (const task of tasks) {
-			const card = this.extractor.createCardFromTask(task);
+			const card = await this.extractor.createCardFromTask(task);
 			await this.extractor.addCardToBoard(card, board);
 		}
 	}
