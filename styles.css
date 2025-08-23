@@ -620,6 +620,8 @@
 
 .crystal-card-content {
 	margin-bottom: 0.5rem;
+	padding-left: 1.8rem; /* Make room for checkbox */
+	padding-top: 0.2rem; /* Slight top padding to align with checkbox */
 }
 
 .crystal-card-title {
@@ -1701,3 +1703,99 @@
 .crystal-note-preview-content em {
 	font-style: italic;
 }
+
+/* Bulk Selection Styles */
+.crystal-bulk-action-toolbar {
+	display: none;
+	align-items: center;
+	justify-content: space-between;
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.75rem 1rem;
+	margin-bottom: 1rem;
+	gap: 1rem;
+	transition: all 0.2s ease;
+}
+
+.crystal-selection-info {
+	font-size: 0.9rem;
+	color: var(--text-normal);
+	font-weight: 500;
+}
+
+.crystal-bulk-actions {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.crystal-bulk-action-btn {
+	background: var(--interactive-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 0.4rem 0.8rem;
+	color: var(--text-normal);
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+}
+
+.crystal-bulk-action-btn:hover {
+	background: var(--interactive-hover);
+	border-color: var(--interactive-accent);
+}
+
+.crystal-bulk-action-delete {
+	color: var(--text-error);
+}
+
+.crystal-bulk-action-delete:hover {
+	background: var(--text-error);
+	color: white;
+	border-color: var(--text-error);
+}
+
+/* Card Selection Styles */
+.crystal-card-selection {
+	position: absolute;
+	top: 0.4rem;
+	left: 0.4rem;
+	z-index: 10;
+}
+
+.crystal-card-checkbox {
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	width: 14px;
+	height: 14px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 2px;
+	background: var(--background-primary);
+	cursor: pointer;
+	margin: 0;
+	padding: 0;
+	position: relative;
+	transition: all 0.2s ease;
+	outline: none;
+}
+
+.crystal-card-checkbox:hover {
+	border-color: var(--interactive-accent);
+}
+
+.crystal-card-checkbox:checked {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.crystal-card-selected {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-active-hover);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+

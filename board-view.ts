@@ -8,6 +8,8 @@ export class BoardView extends ItemView {
 	plugin: CrystalBoardsPlugin;
 	board: Board;
 	dragDropManager: DragDropManager;
+	selectedCards: Set<string> = new Set();
+	bulkActionMode: boolean = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: CrystalBoardsPlugin, board: Board) {
 		super(leaf);
@@ -62,6 +64,9 @@ export class BoardView extends ItemView {
 			cls: 'mod-cta crystal-board-add-column-btn'
 		});
 		addColumnBtn.onclick = () => this.openAddColumnModal();
+
+		// Bulk action toolbar (shown when cards are selected)
+		this.renderBulkActionToolbar(contentEl);
 
 		// Board cover image (if set)
 		if (this.board.coverImage && this.plugin.settings.showCoverImages) {
@@ -183,10 +188,28 @@ export class BoardView extends ItemView {
 			attr: { 'data-card-id': card.id }
 		});
 
+		// Add selection state if card is selected
+		if (this.selectedCards.has(card.id)) {
+			cardEl.addClass('crystal-card-selected');
+		}
+
+		// Selection checkbox
+		const selectionEl = cardEl.createEl('div', { cls: 'crystal-card-selection' });
+		const checkbox = selectionEl.createEl('input', {
+			type: 'checkbox',
+			cls: 'crystal-card-checkbox'
+		}) as HTMLInputElement;
+		checkbox.checked = this.selectedCards.has(card.id);
+		checkbox.onclick = (e) => {
+			e.stopPropagation();
+			this.toggleCardSelection(card.id);
+		};
+
 		// Make the entire card clickable to open modal
 		cardEl.onclick = (e) => {
-			// Don't trigger if clicking on action buttons
-			if (!(e.target as HTMLElement).closest('.crystal-card-actions')) {
+			// Don't trigger if clicking on action buttons or checkbox
+			if (!(e.target as HTMLElement).closest('.crystal-card-actions') && 
+				!(e.target as HTMLElement).closest('.crystal-card-selection')) {
 				this.openCardModal(card, columnId);
 			}
 		};
@@ -516,6 +539,335 @@ export class BoardView extends ItemView {
 		if (file) {
 			this.app.workspace.openLinkText(notePath, '', true);
 		}
+	}
+
+	// Selection management methods
+	toggleCardSelection(cardId: string): void {
+		if (this.selectedCards.has(cardId)) {
+			this.selectedCards.delete(cardId);
+		} else {
+			this.selectedCards.add(cardId);
+		}
+		this.updateCardSelectionUI(cardId);
+		this.updateBulkActionToolbar();
+	}
+
+	selectAllCards(): void {
+		this.selectedCards.clear();
+		// Add all card IDs from all columns
+		for (const column of this.board.columns) {
+			for (const card of column.cards) {
+				this.selectedCards.add(card.id);
+			}
+		}
+		this.renderBoard();
+	}
+
+	clearSelection(): void {
+		this.selectedCards.clear();
+		this.renderBoard();
+	}
+
+	private updateCardSelectionUI(cardId: string): void {
+		const cardEl = this.containerEl.querySelector(`[data-card-id="${cardId}"]`);
+		if (cardEl) {
+			const checkbox = cardEl.querySelector('.crystal-card-checkbox') as HTMLInputElement;
+			if (checkbox) {
+				checkbox.checked = this.selectedCards.has(cardId);
+			}
+			
+			if (this.selectedCards.has(cardId)) {
+				cardEl.addClass('crystal-card-selected');
+			} else {
+				cardEl.removeClass('crystal-card-selected');
+			}
+		}
+	}
+
+	private renderBulkActionToolbar(contentEl: HTMLElement): void {
+		const toolbarContainer = contentEl.createEl('div', { 
+			cls: 'crystal-bulk-action-toolbar'
+		});
+		
+		if (this.selectedCards.size === 0) {
+			toolbarContainer.style.display = 'none';
+		} else {
+			toolbarContainer.style.display = 'flex';
+		}
+
+		// Selection info
+		const selectionInfo = toolbarContainer.createEl('div', { 
+			cls: 'crystal-selection-info',
+			text: `${this.selectedCards.size} cards selected`
+		});
+
+		// Bulk actions
+		const actionsContainer = toolbarContainer.createEl('div', { cls: 'crystal-bulk-actions' });
+
+		// Select All button
+		const selectAllBtn = actionsContainer.createEl('button', {
+			text: 'Select All',
+			cls: 'crystal-bulk-action-btn'
+		});
+		selectAllBtn.onclick = () => this.selectAllCards();
+
+		// Clear Selection button
+		const clearBtn = actionsContainer.createEl('button', {
+			text: 'Clear',
+			cls: 'crystal-bulk-action-btn'
+		});
+		clearBtn.onclick = () => this.clearSelection();
+
+		// Move to Column button
+		const moveBtn = actionsContainer.createEl('button', {
+			text: '📁 Move',
+			cls: 'crystal-bulk-action-btn'
+		});
+		moveBtn.onclick = () => this.openBulkMoveModal();
+
+		// Manage Tags button
+		const tagsBtn = actionsContainer.createEl('button', {
+			text: '🏷️ Tags',
+			cls: 'crystal-bulk-action-btn'
+		});
+		tagsBtn.onclick = () => this.openBulkTagModal();
+
+		// Delete button
+		const deleteBtn = actionsContainer.createEl('button', {
+			text: '🗑️ Delete',
+			cls: 'crystal-bulk-action-btn crystal-bulk-action-delete'
+		});
+		deleteBtn.onclick = () => this.confirmBulkDelete();
+	}
+
+	private updateBulkActionToolbar(): void {
+		const toolbar = this.containerEl.querySelector('.crystal-bulk-action-toolbar');
+		if (toolbar) {
+			const selectionInfo = toolbar.querySelector('.crystal-selection-info');
+			if (selectionInfo) {
+				selectionInfo.textContent = `${this.selectedCards.size} cards selected`;
+			}
+			
+			if (this.selectedCards.size === 0) {
+				(toolbar as HTMLElement).style.display = 'none';
+			} else {
+				(toolbar as HTMLElement).style.display = 'flex';
+			}
+		}
+	}
+
+	// Bulk action methods
+	async confirmBulkDelete(): Promise<void> {
+		if (this.selectedCards.size === 0) return;
+
+		const confirmed = await this.showConfirmDialog(
+			'Delete Selected Cards',
+			`Are you sure you want to delete ${this.selectedCards.size} selected card(s)? This action cannot be undone.`
+		);
+
+		if (confirmed) {
+			await this.executeBulkDelete();
+		}
+	}
+
+	private async executeBulkDelete(): Promise<void> {
+		const selectedCardIds = Array.from(this.selectedCards);
+		
+		// Find and delete each selected card
+		for (const column of this.board.columns) {
+			const cardsToDelete = column.cards.filter(card => selectedCardIds.includes(card.id));
+			for (const card of cardsToDelete) {
+				await this.plugin.dataManager.removeCardFromColumn(this.board.id, column.id, card.id);
+			}
+		}
+
+		this.selectedCards.clear();
+		const updatedBoard = this.plugin.dataManager.getBoardById(this.board.id);
+		if (updatedBoard) {
+			this.board = updatedBoard;
+			await this.renderBoard();
+		}
+	}
+
+	private openBulkMoveModal(): void {
+		if (this.selectedCards.size === 0) return;
+		
+		new BulkMoveModal(this.app, this.plugin, this.board, Array.from(this.selectedCards), async (targetColumnId) => {
+			await this.executeBulkMove(targetColumnId);
+		}).open();
+	}
+
+	private async executeBulkMove(targetColumnId: string): Promise<void> {
+		const selectedCardIds = Array.from(this.selectedCards);
+		const cardsToMove: { card: Card; sourceColumnId: string }[] = [];
+
+		// Collect all cards to move
+		for (const column of this.board.columns) {
+			for (const card of column.cards) {
+				if (selectedCardIds.includes(card.id)) {
+					cardsToMove.push({ card, sourceColumnId: column.id });
+				}
+			}
+		}
+
+		// Move each card
+		for (const { card, sourceColumnId } of cardsToMove) {
+			if (sourceColumnId !== targetColumnId) {
+				await this.plugin.dataManager.removeCardFromColumn(this.board.id, sourceColumnId, card.id);
+				await this.plugin.dataManager.addCardToColumn(this.board.id, targetColumnId, card);
+			}
+		}
+
+		this.selectedCards.clear();
+		const updatedBoard = this.plugin.dataManager.getBoardById(this.board.id);
+		if (updatedBoard) {
+			this.board = updatedBoard;
+			await this.renderBoard();
+		}
+	}
+
+	private openBulkTagModal(): void {
+		if (this.selectedCards.size === 0) return;
+		
+		new BulkTagModal(this.app, this.plugin, this.board, Array.from(this.selectedCards), async (action, tags) => {
+			await this.executeBulkTagAction(action, tags);
+		}).open();
+	}
+
+	private async executeBulkTagAction(action: 'add' | 'remove' | 'replace', tags: string[]): Promise<void> {
+		const selectedCardIds = Array.from(this.selectedCards);
+
+		for (const column of this.board.columns) {
+			for (const card of column.cards) {
+				if (selectedCardIds.includes(card.id)) {
+					let updatedTags = [...card.tags];
+
+					switch (action) {
+						case 'add':
+							// Add new tags that aren't already present
+							for (const tag of tags) {
+								if (!updatedTags.includes(tag)) {
+									updatedTags.push(tag);
+								}
+							}
+							break;
+						case 'remove':
+							// Remove specified tags
+							updatedTags = updatedTags.filter(tag => !tags.includes(tag));
+							break;
+						case 'replace':
+							// Replace all tags with new ones
+							updatedTags = [...tags];
+							break;
+					}
+
+					const updatedCard = { ...card, tags: updatedTags, modified: Date.now() };
+					await this.plugin.dataManager.updateCard(this.board.id, column.id, updatedCard);
+				}
+			}
+		}
+
+		this.selectedCards.clear();
+		const updatedBoard = this.plugin.dataManager.getBoardById(this.board.id);
+		if (updatedBoard) {
+			this.board = updatedBoard;
+			await this.renderBoard();
+		}
+	}
+
+	// Bulk action methods
+	private confirmBulkDelete(): void {
+		const count = this.selectedCards.size;
+		const modal = new BulkDeleteModal(this.app, count, () => {
+			this.executeBulkDelete();
+		});
+		modal.open();
+	}
+
+	private executeBulkDelete(): void {
+		const cardsToDelete = Array.from(this.selectedCards);
+		
+		// Remove cards from board
+		this.board.columns.forEach(column => {
+			column.cards = column.cards.filter(card => !cardsToDelete.includes(card.id));
+		});
+
+		// Clear selection
+		this.clearSelection();
+		
+		// Save and refresh
+		this.plugin.saveBoards();
+		this.refreshView();
+	}
+
+	private showBulkMoveModal(): void {
+		const modal = new BulkMoveModal(this.app, this.board, this.selectedCards, (targetColumnId: string) => {
+			this.executeBulkMove(targetColumnId);
+		});
+		modal.open();
+	}
+
+	private executeBulkMove(targetColumnId: string): void {
+		const cardsToMove: Card[] = [];
+		const selectedCardIds = Array.from(this.selectedCards);
+
+		// Collect cards to move and remove from current columns
+		this.board.columns.forEach(column => {
+			for (let i = column.cards.length - 1; i >= 0; i--) {
+				const card = column.cards[i];
+				if (selectedCardIds.includes(card.id)) {
+					cardsToMove.push(card);
+					column.cards.splice(i, 1);
+				}
+			}
+		});
+
+		// Add cards to target column
+		const targetColumn = this.board.columns.find(col => col.id === targetColumnId);
+		if (targetColumn) {
+			targetColumn.cards.push(...cardsToMove);
+		}
+
+		// Clear selection
+		this.clearSelection();
+		
+		// Save and refresh
+		this.plugin.saveBoards();
+		this.refreshView();
+	}
+
+	private showBulkTagModal(): void {
+		const modal = new BulkTagModal(this.app, this.selectedCards, (action: string, tags: string[]) => {
+			this.executeBulkTagAction(action, tags);
+		});
+		modal.open();
+	}
+
+	private executeBulkTagAction(action: string, tags: string[]): void {
+		const selectedCardIds = Array.from(this.selectedCards);
+
+		// Find and update cards
+		this.board.columns.forEach(column => {
+			column.cards.forEach(card => {
+				if (selectedCardIds.includes(card.id)) {
+					if (action === 'add') {
+						const existingTags = card.tags || [];
+						card.tags = [...new Set([...existingTags, ...tags])];
+					} else if (action === 'remove') {
+						card.tags = (card.tags || []).filter(tag => !tags.includes(tag));
+					} else if (action === 'replace') {
+						card.tags = [...tags];
+					}
+				}
+			});
+		});
+
+		// Clear selection
+		this.clearSelection();
+		
+		// Save and refresh
+		this.plugin.saveBoards();
+		this.refreshView();
 	}
 
 	private generateId(): string {
