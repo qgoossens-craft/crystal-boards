@@ -2020,3 +2020,249 @@
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Bulk Action Modal Styles */
+.crystal-column-selector {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: 0.5rem;
+	margin: 1rem 0;
+}
+
+.crystal-column-option-btn {
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	cursor: pointer;
+	font-size: 0.9rem;
+	transition: all 0.2s ease;
+	opacity: 0.8;
+}
+
+.crystal-column-option-btn:hover {
+	opacity: 1;
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.crystal-tag-action-selector {
+	margin: 1rem 0;
+}
+
+.crystal-tag-action-selector label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 500;
+}
+
+.crystal-tag-action-select {
+	width: 100%;
+	padding: 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.crystal-tag-input-container {
+	margin: 1rem 0;
+}
+
+.crystal-tag-input-container label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 500;
+}
+
+.crystal-tag-input {
+	width: 100%;
+	padding: 0.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.9rem;
+}
+
+.crystal-existing-tags {
+	margin: 1rem 0;
+}
+
+.crystal-existing-tags label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 500;
+	color: var(--text-muted);
+}
+
+.crystal-tags-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+}
+
+.crystal-tag-chip {
+	background: var(--tag-background);
+	color: var(--tag-color);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 12px;
+	padding: 0.2rem 0.5rem;
+	font-size: 0.8rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.crystal-tag-chip:hover {
+	background: var(--interactive-hover);
+	border-color: var(--interactive-accent);
+}
+
+/* Enhanced Image Search Styles */
+.crystal-path-suggestions {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin: 0.5rem 0;
+	padding: 0.5rem;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.crystal-path-suggestion {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4rem 0.6rem;
+	cursor: pointer;
+	border-radius: 4px;
+	transition: all 0.2s ease;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.crystal-path-suggestion:hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.crystal-folder-icon {
+	font-size: 0.9rem;
+	flex-shrink: 0;
+}
+
+.crystal-folder-path {
+	font-size: 0.85rem;
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+}
+
+.crystal-search-info {
+	flex: 1;
+	padding: 0.3rem;
+	min-height: 0;
+}
+
+.crystal-search-result-item {
+	display: flex;
+	flex-direction: column;
+	cursor: pointer;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1px solid var(--background-modifier-border);
+	transition: all 0.2s ease;
+	background: var(--background-primary);
+}
+
+.crystal-search-result-item:hover {
+	border-color: var(--interactive-accent);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.crystal-search-thumbnail {
+	width: 100%;
+	height: 60px;
+	background-size: cover;
+	background-position: center;
+	background-color: var(--background-secondary);
+	flex-shrink: 0;
+}
+
+.crystal-search-filename {
+	padding: 0.4rem;
+	font-size: 0.75rem;
+	color: var(--text-normal);
+	background: var(--background-primary);
+	text-align: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: 500;
+}
+
+.crystal-search-filepath {
+	padding: 0.2rem 0.4rem;
+	font-size: 0.65rem;
+	color: var(--text-muted);
+	background: var(--background-secondary);
+	text-align: center;
+	font-family: var(--font-monospace);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.crystal-match-indicator {
+	padding: 0.2rem 0.4rem;
+	background: var(--background-modifier-hover);
+	text-align: center;
+}
+
+.crystal-match-type {
+	font-size: 0.65rem;
+	color: var(--text-muted);
+	font-weight: 500;
+}
+
+/* Match type specific styling */
+.crystal-match-exact {
+	border-color: var(--color-green);
+}
+
+.crystal-match-exact .crystal-match-type {
+	color: var(--color-green);
+}
+
+.crystal-match-folder {
+	border-color: var(--color-blue);
+}
+
+.crystal-match-folder .crystal-match-type {
+	color: var(--color-blue);
+}
+
+.crystal-match-filename {
+	border-color: var(--color-orange);
+}
+
+.crystal-match-filename .crystal-match-type {
+	color: var(--color-orange);
+}
+
+.crystal-match-path {
+	border-color: var(--color-purple);
+}
+
+.crystal-match-path .crystal-match-type {
+	color: var(--color-purple);
+}
+
+/* Enhanced search results grid */
+.crystal-search-results-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	gap: 0.5rem;
+}
+

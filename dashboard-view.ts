@@ -769,44 +769,160 @@ class CreateBoardModal extends Modal {
 			return;
 		}
 
-		// Filter images based on search term
-		this.imageSearchResults = this.allImageFiles
-			.filter(file => 
-				file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				file.path.toLowerCase().includes(searchTerm.toLowerCase())
-			)
-			.slice(0, 6); // Limit to 6 results
+		const searchLower = searchTerm.toLowerCase();
+		
+		// Enhanced search with path autocomplete and folder suggestions
+		let results: Array<{file: TFile, matchType: 'exact' | 'folder' | 'filename' | 'path', score: number}> = [];
+		
+		// Get unique folder paths from image files for autocomplete suggestions
+		const folderPaths = new Set<string>();
+		this.allImageFiles.forEach(file => {
+			const pathParts = file.path.split('/');
+			// Add progressively longer path segments
+			for (let i = 1; i < pathParts.length; i++) {
+				const folderPath = pathParts.slice(0, i).join('/');
+				if (folderPath.toLowerCase().includes(searchLower)) {
+					folderPaths.add(folderPath);
+				}
+			}
+		});
 
-		// Display search results
-		if (this.imageSearchResults.length > 0) {
+		// Score and categorize matches
+		this.allImageFiles.forEach(file => {
+			const fileName = file.name.toLowerCase();
+			const filePath = file.path.toLowerCase();
+			const fileDir = file.parent?.path.toLowerCase() || '';
+			
+			let matchType: 'exact' | 'folder' | 'filename' | 'path' = 'path';
+			let score = 0;
+			
+			// Exact filename match (highest priority)
+			if (fileName === searchLower || fileName.startsWith(searchLower)) {
+				matchType = 'exact';
+				score = 100;
+			}
+			// Folder name match
+			else if (fileDir.includes(searchLower) || file.parent?.name.toLowerCase().includes(searchLower)) {
+				matchType = 'folder';
+				score = 80;
+			}
+			// Filename contains search term
+			else if (fileName.includes(searchLower)) {
+				matchType = 'filename';
+				score = 60;
+			}
+			// Full path contains search term
+			else if (filePath.includes(searchLower)) {
+				matchType = 'path';
+				score = 40;
+			}
+			
+			if (score > 0) {
+				// Boost score for matches at word boundaries
+				if (fileName.includes(' ' + searchLower) || fileName.startsWith(searchLower)) {
+					score += 10;
+				}
+				
+				results.push({file, matchType, score});
+			}
+		});
+		
+		// Sort by score (highest first) and limit results
+		results = results.sort((a, b) => b.score - a.score).slice(0, 8);
+		this.imageSearchResults = results.map(r => r.file);
+
+		// Show folder path suggestions if we have partial path matches
+		const folderSuggestions = Array.from(folderPaths)
+			.filter(path => path.toLowerCase().includes(searchLower))
+			.sort()
+			.slice(0, 3);
+		
+		if (folderSuggestions.length > 0 && searchTerm.includes('/')) {
 			searchResultsEl.createEl('div', { 
-				text: `Found ${this.imageSearchResults.length} image(s):`,
+				text: 'Folder suggestions:',
+				cls: 'crystal-search-results-title'
+			});
+			
+			const suggestionsContainer = searchResultsEl.createEl('div', { cls: 'crystal-path-suggestions' });
+			
+			folderSuggestions.forEach(folderPath => {
+				const suggestionEl = suggestionsContainer.createEl('div', { cls: 'crystal-path-suggestion' });
+				suggestionEl.createEl('span', { text: '📁', cls: 'crystal-folder-icon' });
+				suggestionEl.createEl('span', { text: folderPath, cls: 'crystal-folder-path' });
+				
+				suggestionEl.onclick = () => {
+					// Auto-complete the search input with folder path
+					const searchInput = container.querySelector('input[placeholder*="Search for images"]') as HTMLInputElement;
+					if (searchInput) {
+						searchInput.value = folderPath + '/';
+						searchInput.dispatchEvent(new Event('input'));
+					}
+				};
+			});
+		}
+
+		// Display image search results
+		if (results.length > 0) {
+			searchResultsEl.createEl('div', { 
+				text: `Found ${results.length} image(s):`,
 				cls: 'crystal-search-results-title'
 			});
 
 			const resultsGrid = searchResultsEl.createEl('div', { cls: 'crystal-search-results-grid' });
 			
-			for (const file of this.imageSearchResults) {
-				const resultItem = resultsGrid.createEl('div', { cls: 'crystal-search-result-item' });
+			results.forEach(({file, matchType, score}) => {
+				const resultItem = resultsGrid.createEl('div', { 
+					cls: `crystal-search-result-item crystal-match-${matchType}`
+				});
 				
 				const thumbnail = resultItem.createEl('div', { cls: 'crystal-search-thumbnail' });
 				const url = this.app.vault.getResourcePath(file);
 				thumbnail.style.backgroundImage = `url(${url})`;
 				
-				resultItem.createEl('div', { 
+				const infoContainer = resultItem.createEl('div', { cls: 'crystal-search-info' });
+				
+				// Show filename
+				infoContainer.createEl('div', { 
 					text: file.name,
 					cls: 'crystal-search-filename'
+				});
+				
+				// Show folder path if different from filename search
+				if (file.parent && file.parent.path !== '/') {
+					infoContainer.createEl('div', { 
+						text: file.parent.path,
+						cls: 'crystal-search-filepath'
+					});
+				}
+				
+				// Show match type indicator
+				const matchIndicator = infoContainer.createEl('div', { cls: 'crystal-match-indicator' });
+				const matchLabels = {
+					'exact': '🎯 Exact match',
+					'folder': '📁 Folder match', 
+					'filename': '📄 Filename match',
+					'path': '🔗 Path match'
+				};
+				matchIndicator.createEl('span', { 
+					text: matchLabels[matchType], 
+					cls: 'crystal-match-type'
 				});
 
 				resultItem.onclick = () => {
 					this.coverImage = file.path;
 					this.updateSelectedImageDisplay(container.querySelector('.crystal-selected-image') as HTMLElement);
 					searchResultsEl.empty();
+					
+					// Update search input to show selected file path
+					const searchInput = container.querySelector('input[placeholder*="Search for images"]') as HTMLInputElement;
+					if (searchInput) {
+						searchInput.value = file.path;
+					}
 				};
-			}
-		} else {
+			});
+		} else if (folderSuggestions.length === 0) {
 			searchResultsEl.createEl('div', { 
-				text: 'No images found matching your search.',
+				text: 'No images found matching your search. Try searching by folder path (e.g., "Images/" or "Attachments/photos").',
 				cls: 'crystal-search-no-results'
 			});
 		}
@@ -1089,44 +1205,165 @@ class EditBoardModal extends Modal {
 			return;
 		}
 
-		// Filter images based on search term
-		this.imageSearchResults = this.allImageFiles
-			.filter(file => 
-				file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				file.path.toLowerCase().includes(searchTerm.toLowerCase())
-			)
-			.slice(0, 6); // Limit to 6 results
+		const searchLower = searchTerm.toLowerCase();
+		
+		// Enhanced search with path autocomplete and folder suggestions
+		let results: Array<{file: TFile, matchType: 'exact' | 'folder' | 'filename' | 'path', score: number}> = [];
+		
+		// Get unique folder paths from image files for autocomplete suggestions
+		const folderPaths = new Set<string>();
+		this.allImageFiles.forEach(file => {
+			const pathParts = file.path.split('/');
+			// Add progressively longer path segments
+			for (let i = 1; i < pathParts.length; i++) {
+				const folderPath = pathParts.slice(0, i).join('/');
+				if (folderPath.toLowerCase().includes(searchLower)) {
+					folderPaths.add(folderPath);
+				}
+			}
+		});
 
-		// Display search results
-		if (this.imageSearchResults.length > 0) {
+		// Score and categorize matches
+		this.allImageFiles.forEach(file => {
+			const fileName = file.name.toLowerCase();
+			const filePath = file.path.toLowerCase();
+			const fileDir = file.parent?.path.toLowerCase() || '';
+			
+			let matchType: 'exact' | 'folder' | 'filename' | 'path' = 'path';
+			let score = 0;
+			
+			// Exact filename match (highest priority)
+			if (fileName === searchLower || fileName.startsWith(searchLower)) {
+				matchType = 'exact';
+				score = 100;
+			}
+			// Folder name match
+			else if (fileDir.includes(searchLower) || file.parent?.name.toLowerCase().includes(searchLower)) {
+				matchType = 'folder';
+				score = 80;
+			}
+			// Filename contains search term
+			else if (fileName.includes(searchLower)) {
+				matchType = 'filename';
+				score = 60;
+			}
+			// Full path contains search term
+			else if (filePath.includes(searchLower)) {
+				matchType = 'path';
+				score = 40;
+			}
+			
+			if (score > 0) {
+				// Boost score for matches at word boundaries
+				if (fileName.includes(' ' + searchLower) || fileName.startsWith(searchLower)) {
+					score += 10;
+				}
+				
+				results.push({file, matchType, score});
+			}
+		});
+		
+		// Sort by score (highest first) and limit results
+		results = results.sort((a, b) => b.score - a.score).slice(0, 8);
+		this.imageSearchResults = results.map(r => r.file);
+
+		// Show folder path suggestions if we have partial path matches
+		const folderSuggestions = Array.from(folderPaths)
+			.filter(path => path.toLowerCase().includes(searchLower))
+			.sort()
+			.slice(0, 3);
+		
+		if (folderSuggestions.length > 0 && searchTerm.includes('/')) {
 			searchResultsEl.createEl('div', { 
-				text: `Found ${this.imageSearchResults.length} image(s):`,
+				text: 'Folder suggestions:',
+				cls: 'crystal-search-results-title'
+			});
+			
+			const suggestionsContainer = searchResultsEl.createEl('div', { cls: 'crystal-path-suggestions' });
+			
+			folderSuggestions.forEach(folderPath => {
+				const suggestionEl = suggestionsContainer.createEl('div', { cls: 'crystal-path-suggestion' });
+				suggestionEl.createEl('span', { text: '📁', cls: 'crystal-folder-icon' });
+				suggestionEl.createEl('span', { text: folderPath, cls: 'crystal-folder-path' });
+				
+				suggestionEl.onclick = () => {
+					// Auto-complete the search input with folder path
+					const searchInput = container.querySelector('input[placeholder*="Search for images"]') as HTMLInputElement;
+					if (searchInput) {
+						searchInput.value = folderPath + '/';
+						searchInput.dispatchEvent(new Event('input'));
+					}
+				};
+			});
+		}
+
+		// Display image search results
+		if (results.length > 0) {
+			searchResultsEl.createEl('div', { 
+				text: `Found ${results.length} image(s):`,
 				cls: 'crystal-search-results-title'
 			});
 
 			const resultsGrid = searchResultsEl.createEl('div', { cls: 'crystal-search-results-grid' });
 			
-			for (const file of this.imageSearchResults) {
-				const resultItem = resultsGrid.createEl('div', { cls: 'crystal-search-result-item' });
+			results.forEach(({file, matchType, score}) => {
+				const resultItem = resultsGrid.createEl('div', { 
+					cls: `crystal-search-result-item crystal-match-${matchType}`
+				});
 				
 				const thumbnail = resultItem.createEl('div', { cls: 'crystal-search-thumbnail' });
 				const url = this.app.vault.getResourcePath(file);
 				thumbnail.style.backgroundImage = `url(${url})`;
 				
-				resultItem.createEl('div', { 
+				const infoContainer = resultItem.createEl('div', { cls: 'crystal-search-info' });
+				
+				// Show filename
+				infoContainer.createEl('div', { 
 					text: file.name,
 					cls: 'crystal-search-filename'
+				});
+				
+				// Show folder path if different from filename search
+				if (file.parent && file.parent.path !== '/') {
+					infoContainer.createEl('div', { 
+						text: file.parent.path,
+						cls: 'crystal-search-filepath'
+					});
+				}
+				
+				// Show match type indicator
+				const matchIndicator = infoContainer.createEl('div', { cls: 'crystal-match-indicator' });
+				const matchLabels = {
+					'exact': '🎯 Exact match',
+					'folder': '📁 Folder match', 
+					'filename': '📄 Filename match',
+					'path': '🔗 Path match'
+				};
+				matchIndicator.createEl('span', { 
+					text: matchLabels[matchType], 
+					cls: 'crystal-match-type'
 				});
 
 				resultItem.onclick = () => {
 					this.coverImage = file.path;
 					this.updateSelectedImageDisplay(container.querySelector('.crystal-selected-image') as HTMLElement);
 					searchResultsEl.empty();
+					
+					// Update search input to show selected file path
+					const searchInput = container.querySelector('input[placeholder*="Search for images"]') as HTMLInputElement;
+					if (searchInput) {
+						searchInput.value = file.path;
+					}
+					
+					// Update preview if it exists (EditBoardModal has preview functionality)
+					if (this.previewEl) {
+						this.updatePreview();
+					}
 				};
-			}
-		} else {
+			});
+		} else if (folderSuggestions.length === 0) {
 			searchResultsEl.createEl('div', { 
-				text: 'No images found matching your search.',
+				text: 'No images found matching your search. Try searching by folder path (e.g., "Images/" or "Attachments/photos").',
 				cls: 'crystal-search-no-results'
 			});
 		}
