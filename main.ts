@@ -87,6 +87,20 @@ export default class CrystalBoardsPlugin extends Plugin {
 		workspace.revealLeaf(leaf);
 	}
 
+	async openDashboardInCurrentTab(): Promise<void> {
+		const { workspace } = this.app;
+
+		// Use the current active leaf and switch its view type to dashboard
+		const activeLeaf = workspace.activeLeaf;
+		if (activeLeaf) {
+			await activeLeaf.setViewState({ 
+				type: DASHBOARD_VIEW_TYPE, 
+				active: true 
+			});
+			workspace.revealLeaf(activeLeaf);
+		}
+	}
+
 	private async ensureKanbanFolderExists(): Promise<void> {
 		const folderPath = this.settings.kanbanFolderPath;
 		if (!(await this.app.vault.adapter.exists(folderPath))) {
@@ -108,10 +122,18 @@ export default class CrystalBoardsPlugin extends Plugin {
 			leaf.detach();
 		}
 
-		// Open new board view
-		const leaf = workspace.getLeaf(true);
-		const view = new BoardView(leaf, this, board);
-		await leaf.open(view);
-		workspace.revealLeaf(leaf);
+		// Find the dashboard leaf and reuse it for the board
+		let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
+		
+		if (!leaf) {
+			// If no dashboard leaf exists, use the active leaf
+			leaf = workspace.activeLeaf;
+		}
+		
+		if (leaf) {
+			const view = new BoardView(leaf, this, board);
+			await leaf.open(view);
+			workspace.revealLeaf(leaf);
+		}
 	}
 }

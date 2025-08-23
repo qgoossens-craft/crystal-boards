@@ -600,6 +600,9 @@
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
+	padding-top: 0.5rem; /* More spacing to separate first card from column border */
+	padding-left: 0.1rem; /* Slight padding to separate cards from column border */
+	padding-right: 0.1rem;
 }
 
 .crystal-card {
@@ -607,10 +610,20 @@
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 6px;
 	padding: 0.75rem;
-	cursor: pointer;
+	cursor: grab;
 	transition: all 0.2s ease;
 	position: relative;
+	box-sizing: border-box;
+	overflow: hidden;
+	/* Ensure card renders above column background */
+	z-index: 3;
 }
+
+.crystal-card:active {
+	cursor: grabbing;
+}
+
+/* Remove the conflicting !important rules that prevent hover states from working */
 
 .crystal-card:hover {
 	transform: translateY(-1px);
@@ -663,12 +676,13 @@
 
 .crystal-card-actions {
 	position: absolute;
-	top: 0.5rem;
-	right: 0.5rem;
+	top: 0.3rem;
+	right: 0.3rem;
 	display: flex;
 	gap: 0.25rem;
 	opacity: 0;
 	transition: opacity 0.2s ease;
+	z-index: 5; /* Ensure buttons don't interfere with border */
 }
 
 .crystal-card:hover .crystal-card-actions {
@@ -676,18 +690,19 @@
 }
 
 .crystal-card-action-btn {
-	background: rgba(0, 0, 0, 0.6);
+	background: rgba(0, 0, 0, 0.7);
 	color: white;
-	border: none;
-	border-radius: 3px;
-	width: 20px;
-	height: 20px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 4px;
+	width: 18px;
+	height: 18px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
 	font-size: 0.6rem;
-	transition: background-color 0.2s ease;
+	transition: all 0.2s ease;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .crystal-card-action-btn:hover {
@@ -767,13 +782,7 @@
 	background: var(--background-modifier-active-hover);
 }
 
-.crystal-card {
-	cursor: grab;
-}
-
-.crystal-card:active {
-	cursor: grabbing;
-}
+/* Drag cursor styles moved to main .crystal-card rule */
 
 /* Drag placeholder */
 .crystal-drag-placeholder {

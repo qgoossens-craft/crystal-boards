@@ -50,7 +50,7 @@ export class BoardView extends ItemView {
 			text: '← Dashboard',
 			cls: 'crystal-board-back-btn'
 		});
-		backBtn.onclick = () => this.plugin.activateDashboardView();
+		backBtn.onclick = () => this.plugin.openDashboardInCurrentTab();
 
 		titleContainer.createEl('h1', { 
 			text: this.board.name, 
