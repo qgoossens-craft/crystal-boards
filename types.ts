@@ -7,6 +7,7 @@ export interface Board {
 	id: string;
 	name: string;
 	folderPath: string;
+	emoji?: string; // Board emoji instead of cover image
 	coverImage?: string;
 	coverImageAlignment?: 'center' | 'top' | 'bottom' | 'left' | 'right';
 	coverImagePosition?: number; // 0-100, vertical position percentage
