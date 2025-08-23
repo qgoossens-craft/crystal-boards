@@ -752,9 +752,9 @@
 }
 
 .crystal-column-action-btn {
-	background: var(--interactive-normal);
-	color: var(--text-normal);
-	border: none;
+	background: transparent;
+	color: var(--text-muted);
+	border: 1px solid transparent;
 	border-radius: 4px;
 	width: 24px;
 	height: 24px;
@@ -763,16 +763,20 @@
 	justify-content: center;
 	cursor: pointer;
 	font-size: 0.7rem;
-	transition: background-color 0.2s ease;
+	transition: all 0.2s ease;
 }
 
 .crystal-column-action-btn:hover {
-	background: var(--interactive-hover);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+	transform: scale(1.1);
 }
 
 .crystal-column-delete-btn:hover {
 	background: var(--text-error);
-	color: white;
+	color: var(--text-on-accent);
+	border-color: var(--text-error);
 }
 
 /* Column Cards */
@@ -872,27 +876,32 @@
 }
 
 .crystal-card-action-btn {
-	background: rgba(0, 0, 0, 0.7);
-	color: white;
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	background: transparent;
+	color: var(--text-muted);
+	border: 1px solid transparent;
 	border-radius: 4px;
-	width: 18px;
-	height: 18px;
+	width: 20px;
+	height: 20px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
-	font-size: 0.6rem;
+	font-size: 0.65rem;
 	transition: all 0.2s ease;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .crystal-card-action-btn:hover {
-	background: rgba(0, 0, 0, 0.8);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+	transform: scale(1.1);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .crystal-card-delete-btn:hover {
 	background: var(--text-error);
+	color: var(--text-on-accent);
+	border-color: var(--text-error);
 }
 
 /* Add Card Button */
