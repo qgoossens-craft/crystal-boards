@@ -1,134 +1,117 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { Plugin } from 'obsidian';
+import { DashboardView } from './dashboard-view';
+import { BoardView } from './board-view';
+import { DataManager } from './data-manager';
+import { PluginSettings, DASHBOARD_VIEW_TYPE, BOARD_VIEW_TYPE, Board } from './types';
+import { CrystalBoardsSettingTab } from './settings-tab';
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
-
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class CrystalBoardsPlugin extends Plugin {
+	settings: PluginSettings;
+	dataManager: DataManager;
 
 	async onload() {
-		await this.loadSettings();
+		console.log('Loading Crystal Boards plugin');
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		// Initialize data manager
+		this.dataManager = new DataManager(this);
+		await this.dataManager.loadData();
+		await this.dataManager.fixBoardPositions(); // Fix any position corruption
+		this.settings = this.dataManager.getSettings();
+
+		// Register views
+		this.registerView(
+			DASHBOARD_VIEW_TYPE,
+			(leaf) => new DashboardView(leaf, this)
+		);
+
+		this.registerView(
+			BOARD_VIEW_TYPE,
+			(leaf) => new BoardView(leaf, this, {} as Board) // Will be updated when opening specific board
+		);
+
+		// Add ribbon icon
+		this.addRibbonIcon('layout-dashboard', 'Crystal Boards', () => {
+			this.activateDashboardView();
 		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
+		// Add commands
 		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
+			id: 'open-crystal-boards-dashboard',
+			name: 'Open Crystal Boards Dashboard',
 			callback: () => {
-				new SampleModal(this.app).open();
+				this.activateDashboardView();
 			}
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
+
 		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+			id: 'create-new-board',
+			name: 'Create New Board',
+			callback: () => {
+				this.activateDashboardView();
+				// Focus will trigger creation modal
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		// Add settings tab
+		this.addSettingTab(new CrystalBoardsSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		// Ensure Kanban folder exists
+		await this.ensureKanbanFolderExists();
 	}
 
 	onunload() {
-
+		console.log('Unloading Crystal Boards plugin');
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	async activateDashboardView(): Promise<void> {
+		const { workspace } = this.app;
+
+		let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
+
+		if (!leaf) {
+			const newLeaf = workspace.getRightLeaf(false);
+			if (newLeaf) {
+				leaf = newLeaf;
+				await leaf.setViewState({ type: DASHBOARD_VIEW_TYPE, active: true });
+			} else {
+				return;
+			}
+		} else {
+			// If dashboard already exists, refresh it when activating
+			const view = leaf.view as any;
+			if (view && view.renderDashboard) {
+				await view.renderDashboard();
+			}
+		}
+
+		workspace.revealLeaf(leaf);
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
+	private async ensureKanbanFolderExists(): Promise<void> {
+		const folderPath = this.settings.kanbanFolderPath;
+		if (!(await this.app.vault.adapter.exists(folderPath))) {
+			await this.app.vault.createFolder(folderPath);
+		}
 	}
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
+	async updateSettings(newSettings: Partial<PluginSettings>): Promise<void> {
+		await this.dataManager.updateSettings(newSettings);
+		this.settings = this.dataManager.getSettings();
 	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
+	async openBoard(board: Board): Promise<void> {
+		const { workspace } = this.app;
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+		// Close existing board views
+		const existingLeaves = workspace.getLeavesOfType(BOARD_VIEW_TYPE);
+		for (const leaf of existingLeaves) {
+			leaf.detach();
+		}
 
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+		// Open new board view
+		const leaf = workspace.getLeaf(true);
+		const view = new BoardView(leaf, this, board);
+		await leaf.open(view);
+		workspace.revealLeaf(leaf);
 	}
 }

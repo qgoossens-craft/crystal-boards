@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "Crystal Boards",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Personal Kanban boards with drag and drop functionality",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

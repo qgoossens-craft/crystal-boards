@@ -1,8 +1,1701 @@
-/*
+/* Crystal Boards Plugin Styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* Dashboard Styles */
+.crystal-boards-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 2rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
 
-If your plugin does not need CSS, delete this file.
+.crystal-boards-title {
+	margin: 0;
+	color: var(--text-normal);
+	font-size: 1.8rem;
+	font-weight: 600;
+}
 
-*/
+.crystal-boards-create-btn {
+	padding: 0.5rem 1rem;
+	font-size: 0.9rem;
+}
+
+/* Dashboard Grid */
+.crystal-boards-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1rem;
+	margin-top: 1rem;
+}
+
+/* Empty State */
+.crystal-boards-empty {
+	grid-column: 1 / -1;
+	text-align: center;
+	padding: 3rem 1rem;
+	color: var(--text-muted);
+}
+
+.crystal-boards-empty-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.crystal-boards-empty-title {
+	margin: 0 0 0.5rem 0;
+	color: var(--text-normal);
+	font-size: 1.2rem;
+}
+
+.crystal-boards-empty-description {
+	margin: 0;
+	font-size: 0.9rem;
+}
+
+/* Board Cards */
+.crystal-board-card {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	overflow: hidden;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	position: relative;
+}
+
+.crystal-board-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	border-color: var(--interactive-accent);
+}
+
+/* Compact Gallery View */
+.crystal-board-card-compact {
+	height: 140px;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+.crystal-board-cover-compact {
+	height: 60px;
+	background: var(--background-secondary);
+	background-size: cover;
+	background-position: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.crystal-board-cover-compact.has-image {
+	background-color: transparent;
+}
+
+.crystal-board-cover-icon {
+	font-size: 1.5rem;
+	color: var(--text-muted);
+}
+
+.crystal-board-card-content {
+	display: flex;
+	align-items: center;
+	height: 80px;
+	padding: 0.75rem;
+	gap: 0.75rem;
+}
+
+.crystal-board-thumbnail {
+	width: 36px;
+	height: 36px;
+	border-radius: 4px;
+	background: var(--background-secondary);
+	background-size: cover;
+	background-position: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.crystal-board-thumbnail.has-image {
+	background-color: transparent;
+}
+
+.crystal-board-thumbnail-icon {
+	font-size: 1rem;
+	color: var(--text-muted);
+}
+
+.crystal-board-info-compact {
+	flex: 1;
+	min-width: 0;
+}
+
+.crystal-board-name-compact {
+	margin: 0 0 0.25rem 0;
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--text-normal);
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.crystal-board-meta-compact {
+	display: flex;
+	align-items: center;
+}
+
+.crystal-board-stats {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	background: var(--background-modifier-hover);
+	padding: 0.15rem 0.4rem;
+	border-radius: 12px;
+}
+
+/* Legacy board card styles (kept for compatibility) */
+.crystal-board-cover {
+	height: 120px;
+	background: var(--background-secondary);
+	background-size: cover;
+	background-position: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+}
+
+.crystal-board-cover.has-image {
+	background-color: transparent;
+}
+
+.crystal-board-default-icon {
+	font-size: 2rem;
+	color: var(--text-muted);
+}
+
+.crystal-board-info {
+	padding: 1rem;
+}
+
+.crystal-board-name {
+	margin: 0 0 0.5rem 0;
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: var(--text-normal);
+	line-height: 1.3;
+}
+
+.crystal-board-meta {
+	display: flex;
+	gap: 0.75rem;
+	font-size: 0.8rem;
+	color: var(--text-muted);
+}
+
+.crystal-board-columns,
+.crystal-board-cards {
+	background: var(--background-modifier-hover);
+	padding: 0.2rem 0.4rem;
+	border-radius: 4px;
+}
+
+/* Board Actions */
+.crystal-board-actions {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	display: flex;
+	gap: 0.25rem;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.crystal-board-card:hover .crystal-board-actions {
+	opacity: 1;
+}
+
+.crystal-board-action-btn {
+	background: rgba(0, 0, 0, 0.6);
+	color: white;
+	border: none;
+	border-radius: 4px;
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	font-size: 0.8rem;
+	transition: background-color 0.2s ease;
+}
+
+.crystal-board-action-btn:hover {
+	background: var(--interactive-hover);
+	color: var(--text-normal);
+	transform: scale(1.05);
+}
+
+.crystal-board-move-btn {
+	font-size: 14px;
+	font-weight: bold;
+	min-width: 24px;
+}
+
+.crystal-board-move-btn:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.crystal-board-move-btn:hover:not(:disabled) {
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	transform: scale(1.05);
+}
+
+/* Settings button hover - for buttons that aren't delete or move */
+.crystal-board-action-btn:not(.crystal-board-delete-btn):not(.crystal-board-move-btn):hover {
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	transform: scale(1.05);
+}
+
+.crystal-board-action-btn.crystal-board-delete-btn:hover {
+	background: var(--text-error) !important;
+	color: white !important;
+	transform: scale(1.05);
+}
+
+/* Modal Styles */
+.modal-button-container {
+	display: flex;
+	gap: 0.5rem;
+	justify-content: flex-end;
+	margin-top: 1.5rem;
+}
+
+.modal-button-container button {
+	padding: 0.5rem 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.crystal-boards-grid {
+		grid-template-columns: 1fr;
+		gap: 1rem;
+	}
+	
+	.crystal-boards-header {
+		flex-direction: column;
+		gap: 1rem;
+		align-items: stretch;
+	}
+	
+	.crystal-boards-title {
+		text-align: center;
+	}
+}
+
+/* Settings Tab Styles */
+.crystal-boards-color-preview {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 1px solid var(--background-modifier-border);
+	display: inline-block;
+	margin-right: 0.5rem;
+}
+
+/* Loading States */
+.crystal-boards-loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem;
+	color: var(--text-muted);
+}
+
+/* Focus States for Accessibility */
+.crystal-board-card:focus,
+.crystal-board-action-btn:focus {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+	.crystal-board-card {
+		border-width: 2px;
+	}
+	
+	.crystal-board-action-btn {
+		background: var(--text-normal);
+		color: var(--background-primary);
+	}
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+	.crystal-board-card {
+		transition: none;
+	}
+	
+	.crystal-board-card:hover {
+		transform: none;
+	}
+	
+	.crystal-board-actions {
+		opacity: 1;
+	}
+}
+
+/* Board View Styles */
+.crystal-board-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1.5rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Board cover image */
+.crystal-board-cover-container {
+	margin-bottom: 1.5rem;
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	position: relative;
+}
+
+.crystal-board-cover {
+	width: 100%;
+	height: 200px;
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-position: center center;
+	border-radius: 8px;
+}
+
+/* Cover image edit button */
+.crystal-board-cover-edit-btn {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	background: rgba(0, 0, 0, 0.7);
+	color: white;
+	border: none;
+	border-radius: 6px;
+	padding: 0.4rem 0.8rem;
+	cursor: pointer;
+	font-size: 0.85rem;
+	opacity: 0;
+	transition: all 0.2s ease;
+	z-index: 10;
+}
+
+.crystal-board-cover-container:hover .crystal-board-cover-edit-btn {
+	opacity: 1;
+}
+
+.crystal-board-cover-edit-btn:hover {
+	background: var(--interactive-accent);
+	transform: scale(1.05);
+}
+
+/* Cover editor modal styles */
+.crystal-cover-editor-modal {
+	max-width: 600px !important;
+}
+
+.crystal-cover-preview-container {
+	width: 100%;
+	max-width: 480px; /* Match the wider background cover */
+	margin: 1rem auto 1.5rem auto;
+	border-radius: 8px;
+	overflow: hidden;
+	border: 2px solid var(--background-modifier-border);
+}
+
+.crystal-cover-preview {
+	width: 100%;
+	height: 120px; /* Match the shorter background cover height */
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-position: center center;
+}
+
+.crystal-position-presets {
+	margin: 1rem 0;
+}
+
+.crystal-position-presets h4 {
+	margin: 0 0 0.75rem 0;
+	color: var(--text-normal);
+	font-size: 0.9rem;
+}
+
+.crystal-presets-grid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 0.5rem;
+}
+
+.crystal-preset-btn {
+	padding: 0.5rem;
+	background: var(--interactive-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	color: var(--text-normal);
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: all 0.2s ease;
+}
+
+.crystal-preset-btn:hover {
+	background: var(--interactive-hover);
+	border-color: var(--interactive-accent);
+}
+
+.crystal-board-title-container {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.crystal-board-back-btn {
+	background: var(--interactive-normal);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 0.5rem 1rem;
+	cursor: pointer;
+	font-size: 0.9rem;
+	transition: background-color 0.2s ease;
+}
+
+.crystal-board-back-btn:hover {
+	background: var(--interactive-hover);
+}
+
+.crystal-board-title {
+	margin: 0;
+	color: var(--text-normal);
+	font-size: 1.5rem;
+	font-weight: 600;
+}
+
+.crystal-board-actions-container {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.crystal-board-add-column-btn {
+	padding: 0.5rem 1rem;
+	font-size: 0.9rem;
+}
+
+/* Board Container */
+.crystal-board-container {
+	flex: 1;
+	overflow: hidden;
+}
+
+.crystal-board-columns {
+	display: flex;
+	gap: 1rem;
+	height: calc(100vh - 200px);
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding-bottom: 1rem;
+}
+
+/* Columns */
+.crystal-column {
+	flex: 0 0 300px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	max-height: 100%;
+	position: relative;
+}
+
+.crystal-column-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+	position: relative;
+}
+
+.crystal-column-title {
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: var(--text-normal);
+	flex: 1;
+}
+
+.crystal-column-count {
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: 0.8rem;
+	padding: 0.2rem 0.5rem;
+	border-radius: 12px;
+	margin-left: 0.5rem;
+}
+
+.crystal-column-actions {
+	display: flex;
+	gap: 0.25rem;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.crystal-column:hover .crystal-column-actions {
+	opacity: 1;
+}
+
+.crystal-column-action-btn {
+	background: var(--interactive-normal);
+	color: var(--text-normal);
+	border: none;
+	border-radius: 4px;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	font-size: 0.7rem;
+	transition: background-color 0.2s ease;
+}
+
+.crystal-column-action-btn:hover {
+	background: var(--interactive-hover);
+}
+
+.crystal-column-delete-btn:hover {
+	background: var(--text-error);
+	color: white;
+}
+
+/* Column Cards */
+.crystal-column-cards {
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.crystal-card {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.75rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	position: relative;
+}
+
+.crystal-card:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	border-color: var(--interactive-accent);
+}
+
+.crystal-card-content {
+	margin-bottom: 0.5rem;
+}
+
+.crystal-card-title {
+	margin: 0 0 0.5rem 0;
+	font-size: 0.9rem;
+	font-weight: 500;
+	color: var(--text-normal);
+	line-height: 1.4;
+}
+
+.crystal-card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-bottom: 0.5rem;
+}
+
+.crystal-card-tag {
+	background: var(--tag-background);
+	color: var(--tag-color);
+	font-size: 0.7rem;
+	padding: 0.15rem 0.4rem;
+	border-radius: 12px;
+	border: 1px solid var(--tag-border);
+}
+
+.crystal-card-note-link {
+	display: block;
+	color: var(--text-accent);
+	font-size: 0.8rem;
+	text-decoration: none;
+	margin-top: 0.5rem;
+	cursor: pointer;
+}
+
+.crystal-card-note-link:hover {
+	text-decoration: underline;
+}
+
+.crystal-card-actions {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	display: flex;
+	gap: 0.25rem;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.crystal-card:hover .crystal-card-actions {
+	opacity: 1;
+}
+
+.crystal-card-action-btn {
+	background: rgba(0, 0, 0, 0.6);
+	color: white;
+	border: none;
+	border-radius: 3px;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	font-size: 0.6rem;
+	transition: background-color 0.2s ease;
+}
+
+.crystal-card-action-btn:hover {
+	background: rgba(0, 0, 0, 0.8);
+}
+
+.crystal-card-delete-btn:hover {
+	background: var(--text-error);
+}
+
+/* Add Card Button */
+.crystal-add-card-btn {
+	background: transparent;
+	color: var(--text-muted);
+	border: 2px dashed var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.75rem;
+	cursor: pointer;
+	font-size: 0.9rem;
+	transition: all 0.2s ease;
+	margin-top: 0.5rem;
+}
+
+.crystal-add-card-btn:hover {
+	color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-hover);
+}
+
+
+
+/* Color Presets Modal */
+.crystal-color-presets {
+	margin: 1rem 0;
+}
+
+.crystal-color-presets h4 {
+	margin: 0 0 0.5rem 0;
+	font-size: 0.9rem;
+	color: var(--text-normal);
+}
+
+.crystal-color-presets-grid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 0.5rem;
+}
+
+.crystal-color-preset-btn {
+	width: 40px;
+	height: 40px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.crystal-color-preset-btn:hover {
+	transform: scale(1.1);
+	border-color: var(--interactive-accent);
+}
+
+/* Drag and Drop Styles */
+.crystal-card-dragging {
+	opacity: 0.5;
+	transform: rotate(5deg);
+	cursor: grabbing;
+}
+
+.crystal-drop-zone-active {
+	border: 2px dashed var(--interactive-accent);
+	background: var(--background-modifier-hover);
+}
+
+.crystal-drop-zone-hover {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-active-hover);
+}
+
+.crystal-card {
+	cursor: grab;
+}
+
+.crystal-card:active {
+	cursor: grabbing;
+}
+
+/* Drag placeholder */
+.crystal-drag-placeholder {
+	height: 60px;
+	background: var(--background-modifier-border);
+	border: 2px dashed var(--interactive-accent);
+	border-radius: 6px;
+	margin: 0.375rem 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-muted);
+	font-size: 0.8rem;
+}
+
+/* Image Search Styles */
+.crystal-image-search-container {
+	margin: 1rem 0;
+}
+
+.crystal-selected-image {
+	margin-top: 0.5rem;
+}
+
+.crystal-selected-image-container {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem;
+	background: var(--background-modifier-hover);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.crystal-selected-thumbnail {
+	width: 40px;
+	height: 40px;
+	border-radius: 4px;
+	background-size: cover;
+	background-position: center;
+	background-color: var(--background-secondary);
+	flex-shrink: 0;
+}
+
+.crystal-selected-info {
+	flex: 1;
+}
+
+.crystal-selected-label {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	margin-bottom: 0.25rem;
+}
+
+.crystal-selected-name {
+	font-size: 0.9rem;
+	color: var(--text-normal);
+	font-weight: 500;
+}
+
+.crystal-remove-image-btn {
+	background: var(--interactive-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 50%;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: 1rem;
+	line-height: 1;
+	transition: all 0.2s ease;
+}
+
+.crystal-remove-image-btn:hover {
+	background: var(--text-error);
+	color: white;
+}
+
+.crystal-image-search-results {
+	margin-top: 0.75rem;
+}
+
+.crystal-search-results-title {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	margin-bottom: 0.5rem;
+}
+
+.crystal-search-results-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+	gap: 0.5rem;
+}
+
+.crystal-search-result-item {
+	cursor: pointer;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1px solid var(--background-modifier-border);
+	transition: all 0.2s ease;
+}
+
+.crystal-search-result-item:hover {
+	border-color: var(--interactive-accent);
+	transform: translateY(-1px);
+}
+
+.crystal-search-thumbnail {
+	width: 100%;
+	height: 60px;
+	background-size: cover;
+	background-position: center;
+	background-color: var(--background-secondary);
+}
+
+.crystal-search-filename {
+	padding: 0.4rem;
+	font-size: 0.75rem;
+	color: var(--text-normal);
+	background: var(--background-primary);
+	text-align: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.crystal-search-no-results {
+	text-align: center;
+	color: var(--text-muted);
+	font-size: 0.85rem;
+	padding: 1rem;
+	font-style: italic;
+}
+
+/* Note Search Styles */
+.crystal-note-search-container {
+	margin: 1rem 0;
+}
+
+.crystal-selected-notes {
+	margin-top: 0.5rem;
+}
+
+.crystal-selected-notes-title {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	margin-bottom: 0.5rem;
+	font-weight: 500;
+}
+
+.crystal-selected-notes-container {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.crystal-selected-note-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4rem 0.6rem;
+	background: var(--background-modifier-hover);
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.crystal-selected-note-icon {
+	font-size: 0.9rem;
+	flex-shrink: 0;
+}
+
+.crystal-selected-note-name {
+	flex: 1;
+	font-size: 0.85rem;
+	color: var(--text-normal);
+}
+
+.crystal-remove-note-btn {
+	background: var(--interactive-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 50%;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: 0.8rem;
+	line-height: 1;
+	transition: all 0.2s ease;
+}
+
+.crystal-remove-note-btn:hover {
+	background: var(--text-error);
+	color: white;
+}
+
+.crystal-note-search-results {
+	margin-top: 0.75rem;
+}
+
+.crystal-note-search-results-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.crystal-note-search-result-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4rem 0.6rem;
+	cursor: pointer;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	transition: all 0.2s ease;
+}
+
+.crystal-note-search-result-item:hover {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-hover);
+}
+
+.crystal-note-icon {
+	font-size: 0.9rem;
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.crystal-note-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.crystal-note-name {
+	font-size: 0.85rem;
+	color: var(--text-normal);
+	font-weight: 500;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.crystal-note-path {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Updated Card Note Links */
+.crystal-card-note-links {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin-top: 0.5rem;
+}
+
+.crystal-card-note-link {
+	display: block;
+	color: var(--text-accent);
+	font-size: 0.75rem;
+	text-decoration: none;
+	cursor: pointer;
+	padding: 0.2rem 0.4rem;
+	border-radius: 3px;
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	transition: all 0.2s ease;
+}
+
+.crystal-card-note-link:hover {
+	text-decoration: none;
+	background: var(--background-modifier-active-hover);
+	border-color: var(--text-accent);
+}
+
+/* Responsive Board View */
+@media (max-width: 768px) {
+	.crystal-board-header {
+		flex-direction: column;
+		gap: 1rem;
+		align-items: stretch;
+	}
+	
+	.crystal-board-title-container {
+		justify-content: space-between;
+	}
+	
+	.crystal-board-columns {
+		flex-direction: column;
+		height: auto;
+		overflow: visible;
+	}
+	
+	.crystal-column {
+		flex: none;
+		max-height: 400px;
+	}
+	
+	.crystal-column-placeholder {
+		flex: none;
+	}
+}
+
+/* Dashboard Board Drag and Drop Styles */
+.crystal-board-draggable {
+	cursor: grab;
+	transition: transform 0.2s ease, opacity 0.2s ease;
+	user-select: none;
+	-webkit-user-drag: element;
+}
+
+.crystal-board-draggable:active {
+	cursor: grabbing;
+}
+
+.crystal-board-dragging {
+	opacity: 0.6;
+	transform: scale(0.95) rotate(2deg);
+	z-index: 1000;
+	pointer-events: none;
+}
+
+.crystal-board-placeholder {
+	border: 2px dashed var(--interactive-accent);
+	background: var(--background-modifier-hover);
+	opacity: 0.5;
+	transform: scale(0.95);
+}
+
+.crystal-board-placeholder .crystal-board-cover-compact,
+.crystal-board-placeholder .crystal-board-card-content,
+.crystal-board-placeholder .crystal-board-actions {
+	visibility: hidden;
+}
+
+.crystal-board-placeholder::before {
+	content: 'Drop here';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	color: var(--text-muted);
+	font-size: 0.9rem;
+	font-weight: 500;
+	visibility: visible;
+}
+
+/* Card Modal Styles */
+.modal.crystal-card-modal {
+	max-width: 700px !important;
+	width: 90vw !important;
+	max-height: 85vh !important;
+	height: 85vh !important;
+	display: flex !important;
+	flex-direction: column !important;
+	overflow: hidden !important;
+}
+
+.crystal-card-modal .modal-content {
+	max-height: 100% !important;
+	height: 100% !important;
+	display: flex !important;
+	flex-direction: column !important;
+	overflow: hidden !important;
+	padding: 0 !important;
+}
+
+.crystal-card-modal .modal-body {
+	flex: 1 !important;
+	display: flex !important;
+	flex-direction: column !important;
+	overflow: hidden !important;
+	padding: 0 !important;
+}
+
+.crystal-card-modal-header {
+	padding: 1.5rem 1.5rem 1rem 1.5rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex-shrink: 0;
+}
+
+.crystal-card-modal-title {
+	margin: 0 0 1rem 0;
+	color: var(--text-normal);
+	font-size: 1.4rem;
+	font-weight: 600;
+}
+
+.crystal-card-modal-content {
+	flex: 1;
+	padding: 1.5rem;
+	overflow-y: auto;
+	min-height: 0;
+}
+
+.crystal-card-modal-footer {
+	padding: 1rem 1.5rem;
+	border-top: 1px solid var(--background-modifier-border);
+	display: flex;
+	gap: 1rem;
+	justify-content: flex-end;
+	flex-shrink: 0;
+}
+
+.crystal-modal-btn {
+	padding: 0.5rem 1.5rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.crystal-modal-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.crystal-modal-btn-primary {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+}
+
+.crystal-modal-btn-primary:hover {
+	background: var(--interactive-accent-hover);
+}
+
+/* Progress Bar */
+.crystal-progress-container {
+	margin-top: 1rem;
+}
+
+.crystal-progress-bar {
+	width: 100%;
+	height: 8px;
+	background: var(--background-modifier-border);
+	border-radius: 4px;
+	overflow: hidden;
+	margin-bottom: 0.5rem;
+}
+
+.crystal-progress-fill {
+	height: 100%;
+	background: var(--interactive-accent);
+	transition: width 0.3s ease;
+	border-radius: 4px;
+}
+
+.crystal-progress-text {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	text-align: center;
+}
+
+/* Card Sections */
+.crystal-card-section {
+	margin-bottom: 2rem;
+	padding-bottom: 1.5rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.crystal-card-section:last-child {
+	border-bottom: none;
+	margin-bottom: 0;
+}
+
+.crystal-section-title {
+	margin: 0 0 1rem 0;
+	color: var(--text-normal);
+	font-size: 1.1rem;
+	font-weight: 600;
+}
+
+.crystal-section-title-container {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+.crystal-add-btn {
+	padding: 0.4rem 0.8rem;
+	background: var(--interactive-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	color: var(--text-normal);
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: all 0.2s ease;
+}
+
+.crystal-add-btn:hover {
+	background: var(--interactive-hover);
+}
+
+.crystal-empty-state {
+	color: var(--text-muted);
+	font-style: italic;
+	text-align: center;
+	padding: 1rem;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px dashed var(--background-modifier-border);
+}
+
+/* Tags */
+.crystal-tags-display {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+	min-height: 2rem;
+	align-items: flex-start;
+}
+
+.crystal-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.3rem 0.6rem;
+	background: var(--tag-background);
+	color: var(--tag-color);
+	border-radius: 12px;
+	font-size: 0.8rem;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.crystal-tag-remove {
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 0;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+}
+
+.crystal-tag-remove:hover {
+	background: var(--text-error);
+	color: white;
+}
+
+/* Notes */
+.crystal-notes-display {
+	margin-bottom: 1rem;
+	min-height: 2rem;
+}
+
+.crystal-linked-note {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.6rem;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	margin-bottom: 0.5rem;
+}
+
+.crystal-note-link {
+	color: var(--text-accent);
+	cursor: pointer;
+	text-decoration: none;
+	flex: 1;
+}
+
+.crystal-note-link:hover {
+	text-decoration: underline;
+}
+
+.crystal-note-remove {
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 0.2rem;
+	border-radius: 50%;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+}
+
+.crystal-note-remove:hover {
+	background: var(--text-error);
+	color: white;
+}
+
+.crystal-search-results {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	max-height: 200px;
+	overflow-y: auto;
+	margin-top: 0.5rem;
+}
+
+.crystal-search-result {
+	padding: 0.6rem;
+	cursor: pointer;
+	border-bottom: 1px solid var(--background-modifier-border);
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+
+.crystal-search-result:last-child {
+	border-bottom: none;
+}
+
+.crystal-search-result:hover {
+	background: var(--background-modifier-hover);
+}
+
+.crystal-note-path {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}
+
+/* Todos */
+.crystal-todos-display {
+	margin-bottom: 1rem;
+	min-height: 2rem;
+}
+
+.crystal-todo-item {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	padding: 0.6rem;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	margin-bottom: 0.5rem;
+}
+
+.crystal-todo-checkbox {
+	flex-shrink: 0;
+	cursor: pointer;
+}
+
+.crystal-todo-text {
+	flex: 1;
+	background: transparent;
+	border: none;
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	padding: 0.2rem 0;
+}
+
+.crystal-todo-text:focus {
+	outline: none;
+	background: var(--background-primary);
+	border-radius: 4px;
+	padding: 0.2rem 0.4rem;
+}
+
+.crystal-todo-remove {
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 0.2rem;
+	border-radius: 50%;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+	flex-shrink: 0;
+}
+
+.crystal-todo-remove:hover {
+	background: var(--text-error);
+	color: white;
+}
+
+/* Research URLs */
+.crystal-urls-display {
+	margin-bottom: 1rem;
+	min-height: 2rem;
+}
+
+.crystal-url-item {
+	padding: 1rem;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	margin-bottom: 0.8rem;
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 0.8rem;
+	align-items: start;
+}
+
+.crystal-url-item > input {
+	background: transparent;
+	border: none;
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	padding: 0.3rem 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 0.5rem;
+}
+
+.crystal-url-item > input:focus {
+	outline: none;
+	border-bottom-color: var(--interactive-accent);
+}
+
+.crystal-url-title {
+	font-weight: 500;
+}
+
+.crystal-url-input {
+	color: var(--text-accent) !important;
+}
+
+.crystal-url-description {
+	font-size: 0.85rem !important;
+	color: var(--text-muted) !important;
+}
+
+.crystal-url-actions {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	margin-top: 0.3rem;
+}
+
+.crystal-url-open,
+.crystal-url-remove {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0.3rem;
+	border-radius: 50%;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+}
+
+.crystal-url-open {
+	color: var(--interactive-accent);
+}
+
+.crystal-url-open:hover {
+	background: var(--interactive-accent);
+	color: white;
+}
+
+.crystal-url-remove {
+	color: var(--text-muted);
+}
+
+.crystal-url-remove:hover {
+	background: var(--text-error);
+	color: white;
+}
+
+/* Card Display Enhancements */
+.crystal-card {
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.crystal-card:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.crystal-card-description {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	margin: 0.5rem 0;
+	line-height: 1.4;
+}
+
+.crystal-card-progress {
+	margin: 0.5rem 0;
+}
+
+.crystal-card-progress-bar {
+	width: 100%;
+	height: 4px;
+	background: var(--background-modifier-border);
+	border-radius: 2px;
+	overflow: hidden;
+	margin-bottom: 0.25rem;
+}
+
+.crystal-card-progress-fill {
+	height: 100%;
+	background: var(--interactive-accent);
+	transition: width 0.3s ease;
+	border-radius: 2px;
+}
+
+.crystal-card-progress-text {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	text-align: center;
+}
+
+.crystal-card-tag-more {
+	background: var(--background-modifier-border) !important;
+	color: var(--text-muted) !important;
+}
+
+.crystal-card-notes-count,
+.crystal-card-urls-count {
+	margin: 0.4rem 0;
+}
+
+.crystal-card-note-count-text,
+.crystal-card-url-count-text {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+}
+
+/* Enhanced note links with hover */
+.crystal-card-note-link {
+	font-size: 0.75rem;
+	color: var(--text-accent);
+	cursor: pointer;
+	text-decoration: underline;
+	transition: color 0.2s ease;
+}
+
+.crystal-card-note-link:hover {
+	color: var(--text-accent-hover);
+	background: var(--background-modifier-hover);
+	padding: 2px 4px;
+	border-radius: 3px;
+}
+
+.crystal-note-separator {
+	color: var(--text-muted);
+	font-size: 0.75rem;
+}
+
+.crystal-card-notes-summary {
+	color: var(--text-muted);
+	font-size: 0.7rem;
+	font-style: italic;
+}
+
+/* Note preview popup */
+.crystal-note-preview-popup {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 12px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	font-size: 0.8rem;
+	line-height: 1.4;
+	color: var(--text-normal);
+	max-height: 300px;
+	overflow-y: auto;
+	backdrop-filter: blur(10px);
+}
+
+.crystal-note-preview-content {
+	/* Inherit Obsidian's markdown styling */
+}
+
+.crystal-note-preview-content h1,
+.crystal-note-preview-content h2,
+.crystal-note-preview-content h3,
+.crystal-note-preview-content h4,
+.crystal-note-preview-content h5,
+.crystal-note-preview-content h6 {
+	color: var(--text-normal);
+	margin: 0.5em 0;
+}
+
+.crystal-note-preview-content p {
+	margin: 0.5em 0;
+}
+
+.crystal-note-preview-content ul,
+.crystal-note-preview-content ol {
+	margin: 0.5em 0;
+	padding-left: 1.5em;
+}
+
+.crystal-note-preview-content code {
+	background: var(--background-modifier-border);
+	padding: 2px 4px;
+	border-radius: 3px;
+	font-family: var(--font-monospace);
+}
+
+.crystal-note-preview-content blockquote {
+	border-left: 3px solid var(--text-accent);
+	margin: 0.5em 0;
+	padding-left: 1em;
+	color: var(--text-muted);
+}
+
+.crystal-note-preview-content strong {
+	font-weight: bold;
+}
+
+.crystal-note-preview-content em {
+	font-style: italic;
+}
