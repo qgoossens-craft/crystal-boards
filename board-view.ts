@@ -660,14 +660,10 @@ export class BoardView extends ItemView {
 	async confirmBulkDelete(): Promise<void> {
 		if (this.selectedCards.size === 0) return;
 
-		const confirmed = await this.showConfirmDialog(
-			'Delete Selected Cards',
-			`Are you sure you want to delete ${this.selectedCards.size} selected card(s)? This action cannot be undone.`
-		);
-
-		if (confirmed) {
+		const modal = new BulkDeleteModal(this.app, this.selectedCards.size, async () => {
 			await this.executeBulkDelete();
-		}
+		});
+		modal.open();
 	}
 
 	private async executeBulkDelete(): Promise<void> {
@@ -775,100 +771,7 @@ export class BoardView extends ItemView {
 		}
 	}
 
-	// Bulk action methods
-	private confirmBulkDelete(): void {
-		const count = this.selectedCards.size;
-		const modal = new BulkDeleteModal(this.app, count, () => {
-			this.executeBulkDelete();
-		});
-		modal.open();
-	}
-
-	private executeBulkDelete(): void {
-		const cardsToDelete = Array.from(this.selectedCards);
-		
-		// Remove cards from board
-		this.board.columns.forEach(column => {
-			column.cards = column.cards.filter(card => !cardsToDelete.includes(card.id));
-		});
-
-		// Clear selection
-		this.clearSelection();
-		
-		// Save and refresh
-		this.plugin.saveBoards();
-		this.refreshView();
-	}
-
-	private showBulkMoveModal(): void {
-		const modal = new BulkMoveModal(this.app, this.board, this.selectedCards, (targetColumnId: string) => {
-			this.executeBulkMove(targetColumnId);
-		});
-		modal.open();
-	}
-
-	private executeBulkMove(targetColumnId: string): void {
-		const cardsToMove: Card[] = [];
-		const selectedCardIds = Array.from(this.selectedCards);
-
-		// Collect cards to move and remove from current columns
-		this.board.columns.forEach(column => {
-			for (let i = column.cards.length - 1; i >= 0; i--) {
-				const card = column.cards[i];
-				if (selectedCardIds.includes(card.id)) {
-					cardsToMove.push(card);
-					column.cards.splice(i, 1);
-				}
-			}
-		});
-
-		// Add cards to target column
-		const targetColumn = this.board.columns.find(col => col.id === targetColumnId);
-		if (targetColumn) {
-			targetColumn.cards.push(...cardsToMove);
-		}
-
-		// Clear selection
-		this.clearSelection();
-		
-		// Save and refresh
-		this.plugin.saveBoards();
-		this.refreshView();
-	}
-
-	private showBulkTagModal(): void {
-		const modal = new BulkTagModal(this.app, this.selectedCards, (action: string, tags: string[]) => {
-			this.executeBulkTagAction(action, tags);
-		});
-		modal.open();
-	}
-
-	private executeBulkTagAction(action: string, tags: string[]): void {
-		const selectedCardIds = Array.from(this.selectedCards);
-
-		// Find and update cards
-		this.board.columns.forEach(column => {
-			column.cards.forEach(card => {
-				if (selectedCardIds.includes(card.id)) {
-					if (action === 'add') {
-						const existingTags = card.tags || [];
-						card.tags = [...new Set([...existingTags, ...tags])];
-					} else if (action === 'remove') {
-						card.tags = (card.tags || []).filter(tag => !tags.includes(tag));
-					} else if (action === 'replace') {
-						card.tags = [...tags];
-					}
-				}
-			});
-		});
-
-		// Clear selection
-		this.clearSelection();
-		
-		// Save and refresh
-		this.plugin.saveBoards();
-		this.refreshView();
-	}
+	// Bulk action methods - removed duplicates
 
 	private generateId(): string {
 		return Math.random().toString(36).substr(2, 9);
@@ -1008,6 +911,201 @@ class ColumnModal extends Modal {
 
 	private generateId(): string {
 		return Math.random().toString(36).substr(2, 9);
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+// Bulk Action Modal Classes
+class BulkDeleteModal extends Modal {
+	private count: number;
+	private onConfirm: () => Promise<void>;
+
+	constructor(app: App, count: number, onConfirm: () => Promise<void>) {
+		super(app);
+		this.count = count;
+		this.onConfirm = onConfirm;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: 'Delete Selected Cards' });
+		
+		contentEl.createEl('p', { 
+			text: `Are you sure you want to delete ${this.count} selected card(s)? This action cannot be undone.`
+		});
+
+		const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
+		
+		const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+		cancelBtn.onclick = () => this.close();
+		
+		const deleteBtn = buttonContainer.createEl('button', { 
+			text: 'Delete Cards', 
+			cls: 'mod-warning'
+		});
+		deleteBtn.onclick = async () => {
+			await this.onConfirm();
+			this.close();
+		};
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+class BulkMoveModal extends Modal {
+	private plugin: CrystalBoardsPlugin;
+	private board: Board;
+	private selectedCardIds: string[];
+	private onConfirm: (targetColumnId: string) => void;
+
+	constructor(app: App, plugin: CrystalBoardsPlugin, board: Board, selectedCardIds: string[], onConfirm: (targetColumnId: string) => void) {
+		super(app);
+		this.plugin = plugin;
+		this.board = board;
+		this.selectedCardIds = selectedCardIds;
+		this.onConfirm = onConfirm;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: 'Move Selected Cards' });
+		
+		contentEl.createEl('p', { 
+			text: `Move ${this.selectedCardIds.length} selected card(s) to:` 
+		});
+
+		const columnContainer = contentEl.createEl('div', { cls: 'crystal-column-selector' });
+		
+		for (const column of this.board.columns) {
+			const columnBtn = columnContainer.createEl('button', {
+				text: column.name,
+				cls: 'crystal-column-option-btn'
+			});
+			columnBtn.style.backgroundColor = column.color;
+			columnBtn.onclick = () => {
+				this.onConfirm(column.id);
+				this.close();
+			};
+		}
+
+		const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
+		const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+		cancelBtn.onclick = () => this.close();
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+class BulkTagModal extends Modal {
+	private plugin: CrystalBoardsPlugin;
+	private board: Board;
+	private selectedCardIds: string[];
+	private onConfirm: (action: 'add' | 'remove' | 'replace', tags: string[]) => void;
+	private tagInput: HTMLInputElement;
+	private selectedAction: 'add' | 'remove' | 'replace' = 'add';
+
+	constructor(app: App, plugin: CrystalBoardsPlugin, board: Board, selectedCardIds: string[], onConfirm: (action: 'add' | 'remove' | 'replace', tags: string[]) => void) {
+		super(app);
+		this.plugin = plugin;
+		this.board = board;
+		this.selectedCardIds = selectedCardIds;
+		this.onConfirm = onConfirm;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: 'Manage Tags' });
+		
+		contentEl.createEl('p', { 
+			text: `Manage tags for ${this.selectedCardIds.length} selected card(s):` 
+		});
+
+		// Action selector
+		const actionContainer = contentEl.createEl('div', { cls: 'crystal-tag-action-selector' });
+		actionContainer.createEl('label', { text: 'Action:' });
+		
+		const actionSelect = actionContainer.createEl('select', { cls: 'crystal-tag-action-select' });
+		
+		const addOption = actionSelect.createEl('option', { value: 'add', text: 'Add tags' });
+		const removeOption = actionSelect.createEl('option', { value: 'remove', text: 'Remove tags' });
+		const replaceOption = actionSelect.createEl('option', { value: 'replace', text: 'Replace all tags' });
+		
+		actionSelect.onchange = () => {
+			this.selectedAction = actionSelect.value as 'add' | 'remove' | 'replace';
+		};
+
+		// Tag input
+		const inputContainer = contentEl.createEl('div', { cls: 'crystal-tag-input-container' });
+		inputContainer.createEl('label', { text: 'Tags (comma-separated):' });
+		
+		this.tagInput = inputContainer.createEl('input', { 
+			type: 'text',
+			placeholder: 'tag1, tag2, tag3...',
+			cls: 'crystal-tag-input'
+		});
+
+		// Existing tags for reference
+		const existingTags = new Set<string>();
+		for (const column of this.board.columns) {
+			for (const card of column.cards) {
+				if (this.selectedCardIds.includes(card.id)) {
+					card.tags?.forEach(tag => existingTags.add(tag));
+				}
+			}
+		}
+
+		if (existingTags.size > 0) {
+			const existingContainer = contentEl.createEl('div', { cls: 'crystal-existing-tags' });
+			existingContainer.createEl('label', { text: 'Current tags on selected cards:' });
+			const tagsList = existingContainer.createEl('div', { cls: 'crystal-tags-list' });
+			
+			Array.from(existingTags).forEach(tag => {
+				const tagEl = tagsList.createEl('span', { 
+					text: tag, 
+					cls: 'crystal-tag-chip' 
+				});
+				tagEl.onclick = () => {
+					const currentValue = this.tagInput.value;
+					const tags = currentValue ? currentValue.split(',').map(t => t.trim()) : [];
+					if (!tags.includes(tag)) {
+						tags.push(tag);
+						this.tagInput.value = tags.join(', ');
+					}
+				};
+			});
+		}
+
+		const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
+		
+		const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+		cancelBtn.onclick = () => this.close();
+		
+		const confirmBtn = buttonContainer.createEl('button', { 
+			text: 'Apply Changes', 
+			cls: 'mod-cta' 
+		});
+		confirmBtn.onclick = () => {
+			const tagText = this.tagInput.value.trim();
+			if (tagText) {
+				const tags = tagText.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+				if (tags.length > 0) {
+					this.onConfirm(this.selectedAction, tags);
+				}
+			}
+			this.close();
+		};
+
+		this.tagInput.focus();
 	}
 
 	onClose(): void {
