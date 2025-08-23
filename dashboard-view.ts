@@ -41,7 +41,9 @@ export class DashboardView extends ItemView {
 
 		// Header
 		const headerEl = contentEl.createEl('div', { cls: 'crystal-boards-header' });
-		headerEl.createEl('h1', { text: 'Crystal Boards', cls: 'crystal-boards-title' });
+		// Create editable title
+		const titleEl = headerEl.createEl('h1', { cls: 'crystal-boards-title' });
+		this.renderEditableTitle(titleEl);
 		
 		const createBoardBtn = headerEl.createEl('button', {
 			text: 'Create Board',
@@ -271,6 +273,89 @@ export class DashboardView extends ItemView {
 			
 			modal.open();
 		});
+	}
+
+	renderEditableTitle(titleEl: HTMLElement) {
+		const titleText = titleEl.createEl('span', {
+			text: this.plugin.settings.customPluginName,
+			cls: 'crystal-title-text'
+		});
+		
+		const editIcon = titleEl.createEl('span', {
+			cls: 'crystal-title-edit-icon',
+			text: '✏️'
+		});
+		
+		// Add click handler for editing
+		titleEl.addEventListener('click', () => {
+			this.startTitleEdit(titleText, editIcon);
+		});
+		
+		// Add hover effects
+		titleEl.style.cursor = 'pointer';
+		titleEl.title = 'Click to edit plugin name';
+	}
+	
+	startTitleEdit(titleText: HTMLElement, editIcon: HTMLElement) {
+		const currentText = titleText.textContent || this.plugin.settings.customPluginName;
+		
+		// Create input element
+		const input = document.createElement('input');
+		input.type = 'text';
+		input.value = currentText;
+		input.className = 'crystal-title-input';
+		input.style.fontSize = 'inherit';
+		input.style.fontWeight = 'inherit';
+		input.style.border = '2px solid var(--interactive-accent)';
+		input.style.borderRadius = '4px';
+		input.style.padding = '4px 8px';
+		input.style.background = 'var(--background-primary)';
+		input.style.color = 'var(--text-normal)';
+		input.style.width = Math.max(200, currentText.length * 12) + 'px';
+		
+		// Replace text with input
+		titleText.style.display = 'none';
+		editIcon.style.display = 'none';
+		titleText.parentElement?.insertBefore(input, titleText);
+		
+		// Focus and select all text
+		input.focus();
+		input.select();
+		
+		// Save function
+		const saveTitle = async () => {
+			const newTitle = input.value.trim() || 'Crystal Boards';
+			
+			// Update settings
+			this.plugin.settings.customPluginName = newTitle;
+			await this.plugin.saveSettings();
+			
+			// Update display
+			titleText.textContent = newTitle;
+			titleText.style.display = 'inline';
+			editIcon.style.display = 'inline';
+			input.remove();
+		};
+		
+		// Cancel function
+		const cancelEdit = () => {
+			titleText.style.display = 'inline';
+			editIcon.style.display = 'inline';
+			input.remove();
+		};
+		
+		// Event handlers
+		input.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				saveTitle();
+			} else if (e.key === 'Escape') {
+				e.preventDefault();
+				cancelEdit();
+			}
+		});
+		
+		input.addEventListener('blur', saveTitle);
 	}
 }
 

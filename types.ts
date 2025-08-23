@@ -57,13 +57,15 @@ export interface PluginSettings {
 	defaultColumnColors: string[];
 	showCoverImages: boolean;
 	boardsPerRow: number;
+	customPluginName: string;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	kanbanFolderPath: 'Kanban',
 	defaultColumnColors: ['#e3f2fd', '#f3e5f5', '#e8f5e8', '#fff3e0', '#ffebee'],
 	showCoverImages: true,
-	boardsPerRow: 3
+	boardsPerRow: 3,
+	customPluginName: 'Crystal Boards'
 };
 
 // View types

@@ -15,6 +15,38 @@
 	color: var(--text-normal);
 	font-size: 1.8rem;
 	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	transition: all 0.2s ease;
+}
+
+.crystal-boards-title:hover {
+	color: var(--interactive-accent);
+}
+
+.crystal-title-text {
+	display: inline;
+}
+
+.crystal-title-edit-icon {
+	font-size: 0.8rem;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.crystal-boards-title:hover .crystal-title-edit-icon {
+	opacity: 0.6;
+}
+
+.crystal-title-input {
+	outline: none;
+	font-family: inherit;
+}
+
+.crystal-title-input:focus {
+	border-color: var(--interactive-accent) !important;
+	box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
 }
 
 .crystal-boards-create-btn {
