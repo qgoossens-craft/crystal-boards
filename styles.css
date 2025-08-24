@@ -988,7 +988,7 @@
 .crystal-add-card-btn {
 	background: transparent;
 	color: var(--text-muted);
-	border: 2px dashed var(--background-modifier-border);
+	border: 2px solid transparent;
 	border-radius: 6px;
 	padding: 0.75rem;
 	cursor: pointer;
