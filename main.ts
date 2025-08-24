@@ -90,7 +90,9 @@ export default class CrystalBoardsPlugin extends Plugin {
 		let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
 
 		if (!leaf) {
-			const newLeaf = workspace.getRightLeaf(false);
+			// Open in main panel as a tab instead of sidebar
+			// getLeaf(true) creates a new tab in the main panel
+			const newLeaf = workspace.getLeaf('tab');
 			if (newLeaf) {
 				leaf = newLeaf;
 				await leaf.setViewState({ type: DASHBOARD_VIEW_TYPE, active: true });
@@ -161,8 +163,8 @@ export default class CrystalBoardsPlugin extends Plugin {
 		let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
 		
 		if (!leaf) {
-			// If no dashboard leaf exists, create a new leaf
-			leaf = workspace.getLeaf();
+			// If no dashboard leaf exists, create a new tab in the main panel
+			leaf = workspace.getLeaf('tab');
 		}
 		
 		if (leaf) {
