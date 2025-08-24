@@ -15,6 +15,7 @@ export class BoardView extends ItemView {
 	private resizeObserver: ResizeObserver | null = null;
 	private windowResizeHandler: (() => void) | null = null;
 	private workspaceLayoutHandler: (() => void) | null = null;
+	private accentColorObserver: MutationObserver | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: CrystalBoardsPlugin, board: Board) {
 		super(leaf);
@@ -38,6 +39,9 @@ export class BoardView extends ItemView {
 	async onOpen(): Promise<void> {
 		// Clean up any lingering elements from previous implementations
 		this.cleanupLegacyElements();
+		
+		// Setup theme change listener for this board view
+		this.setupAccentColorListener();
 		
 		await this.renderBoard();
 	}
@@ -153,6 +157,12 @@ export class BoardView extends ItemView {
 		if (this.windowResizeHandler) {
 			window.removeEventListener('resize', this.windowResizeHandler);
 			this.windowResizeHandler = null;
+		}
+
+		// Cleanup accent color observer
+		if (this.accentColorObserver) {
+			this.accentColorObserver.disconnect();
+			this.accentColorObserver = null;
 		}
 	}
 
@@ -1143,6 +1153,72 @@ export class BoardView extends ItemView {
 			
 			modal.open();
 		});
+	}
+
+	/**
+	 * Setup accent color change listener for this board view
+	 * Note: The main plugin also has a global listener, but this provides per-view responsiveness
+	 */
+	private setupAccentColorListener(): void {
+		// Store current accent color to detect changes
+		let currentAccentColor = this.getCurrentAccentColor();
+		console.log('🎨 Board View: Initial accent color detected:', currentAccentColor);
+		
+		// Note: We rely primarily on the main plugin's global listener
+		// This is just a lightweight backup check for this specific view
+		const checkAccentColor = () => {
+			const newAccentColor = this.getCurrentAccentColor();
+			if (newAccentColor !== currentAccentColor && newAccentColor) {
+				console.log('🎨 Board View: Accent color changed from', currentAccentColor, 'to', newAccentColor);
+				currentAccentColor = newAccentColor;
+				this.renderBoard(); // Refresh this board view
+			}
+		};
+
+		// Lightweight MutationObserver for class changes only
+		this.accentColorObserver = new MutationObserver((mutations) => {
+			let shouldCheck = false;
+			mutations.forEach((mutation) => {
+				if (mutation.type === 'attributes' && 
+					(mutation.target === document.documentElement || mutation.target === document.body)) {
+					shouldCheck = true;
+				}
+			});
+			
+			if (shouldCheck) {
+				setTimeout(checkAccentColor, 100);
+			}
+		});
+
+		// Observe only class changes on html and body elements
+		this.accentColorObserver.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ['class']
+		});
+
+		this.accentColorObserver.observe(document.body, {
+			attributes: true,
+			attributeFilter: ['class']
+		});
+	}
+
+	/**
+	 * Get the current accent color from CSS custom properties
+	 */
+	private getCurrentAccentColor(): string {
+		const computedStyle = getComputedStyle(document.documentElement);
+		const accentColor = computedStyle.getPropertyValue('--interactive-accent').trim();
+		
+		// Also check for alternative accent color properties
+		if (!accentColor) {
+			const altAccent = computedStyle.getPropertyValue('--accent-color').trim();
+			if (altAccent) return altAccent;
+			
+			const themeAccent = computedStyle.getPropertyValue('--theme-accent').trim();
+			if (themeAccent) return themeAccent;
+		}
+		
+		return accentColor;
 	}
 }
 

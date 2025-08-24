@@ -1,5 +1,10 @@
 /* Crystal Boards Plugin Styles */
 
+/* Dynamic accent color update trigger */
+:root {
+	--crystal-boards-accent-update: 0;
+}
+
 /* Dashboard Styles */
 .crystal-boards-header {
 	display: flex;
@@ -12,7 +17,7 @@
 
 .crystal-boards-title {
 	margin: 0;
-	color: var(--text-normal);
+	color: var(--interactive-accent);    /* Use accent color by default */
 	font-size: 1.8rem;
 	font-weight: 600;
 	display: flex;
@@ -428,6 +433,7 @@
 	background: var(--interactive-accent) !important;
 	color: var(--text-on-accent) !important;
 	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 /* Settings button hover - for buttons that aren't delete or move */
@@ -435,6 +441,7 @@
 	background: var(--interactive-accent) !important;
 	color: var(--text-on-accent) !important;
 	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 .crystal-board-action-btn.crystal-board-delete-btn:hover {
@@ -591,8 +598,10 @@
 }
 
 .crystal-board-cover-edit-btn:hover {
-	background: var(--interactive-accent);
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
 	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 /* Cover editor modal styles */
@@ -667,7 +676,11 @@
 }
 
 .crystal-board-back-btn:hover {
-	background: var(--interactive-hover);
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	border-color: var(--interactive-accent) !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 .crystal-board-title {
@@ -704,6 +717,26 @@
 	grid-template-columns: repeat(var(--column-count, 3), 1fr);
 	/* Minimum column width to prevent too narrow columns */
 	grid-auto-columns: minmax(280px, 1fr);
+}
+
+/* Custom Scrollbar for Board Columns */
+.crystal-board-columns::-webkit-scrollbar {
+	height: 8px;
+}
+
+.crystal-board-columns::-webkit-scrollbar-track {
+	background: var(--background-modifier-border);
+	border-radius: 4px;
+}
+
+.crystal-board-columns::-webkit-scrollbar-thumb {
+	background: var(--interactive-accent);
+	border-radius: 4px;
+	transition: background-color 0.2s ease;
+}
+
+.crystal-board-columns::-webkit-scrollbar-thumb:hover {
+	background: var(--interactive-accent-hover);
 }
 
 /* Columns */
@@ -781,10 +814,11 @@
 }
 
 .crystal-column-action-btn:hover {
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
-	border-color: var(--interactive-accent);
-	transform: scale(1.1);
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	border-color: var(--interactive-accent) !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 .crystal-column-delete-btn:hover {
@@ -803,6 +837,31 @@
 	padding-top: 0.5rem; /* More spacing to separate first card from column border */
 	padding-left: 0.1rem; /* Slight padding to separate cards from column border */
 	padding-right: 0.1rem;
+}
+
+/* Custom Scrollbar for Column Cards (Vertical) - More Specific */
+.crystal-board-view .crystal-column-cards::-webkit-scrollbar {
+	width: 8px !important;
+}
+
+.crystal-board-view .crystal-column-cards::-webkit-scrollbar-track {
+	background: var(--background-modifier-border) !important;
+	border-radius: 4px !important;
+}
+
+.crystal-board-view .crystal-column-cards::-webkit-scrollbar-thumb {
+	background: var(--interactive-accent) !important;
+	border-radius: 4px !important;
+	transition: background-color 0.2s ease !important;
+}
+
+.crystal-board-view .crystal-column-cards::-webkit-scrollbar-thumb:hover {
+	background: var(--interactive-accent-hover) !important;
+}
+
+/* Additional fallback with even higher specificity */
+.view-content .crystal-board-view .crystal-column-cards::-webkit-scrollbar-thumb {
+	background-color: var(--interactive-accent) !important;
 }
 
 .crystal-card {
@@ -905,10 +964,11 @@
 }
 
 .crystal-card-action-btn:hover {
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
-	border-color: var(--interactive-accent);
-	transform: scale(1.1);
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	border-color: var(--interactive-accent) !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -932,9 +992,11 @@
 }
 
 .crystal-add-card-btn:hover {
-	color: var(--interactive-accent);
-	border-color: var(--interactive-accent);
-	background: var(--background-modifier-hover);
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	border-color: var(--interactive-accent) !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 
@@ -2828,8 +2890,8 @@
 
 /* Smart Extract Styles */
 .crystal-smart-extract-btn {
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	color: white !important;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
 	border: none;
 	padding: 0.5rem 1rem;
 	border-radius: 6px;
@@ -2841,8 +2903,9 @@
 }
 
 .crystal-smart-extract-btn:hover {
+	background: var(--interactive-accent-hover);
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+	box-shadow: 0 4px 12px rgba(var(--interactive-accent-rgb), 0.4);
 }
 
 .crystal-smart-extract-btn:active {
@@ -3211,8 +3274,10 @@
 }
 
 .mod-cta:hover {
-	background: var(--interactive-accent-hover);
-	transform: translateY(-1px);
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 	box-shadow: 0 2px 8px rgba(var(--interactive-accent-rgb), 0.3);
 }
 

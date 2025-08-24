@@ -12,6 +12,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 	dataManager: DataManager;
 	taskExtractionService: TaskExtractionService;
 	smartExtractionService: SmartExtractionService;
+	private accentColorObserver: MutationObserver | null = null;
 
 	async onload() {
 		console.log('Loading Crystal Boards plugin');
@@ -89,6 +90,9 @@ export default class CrystalBoardsPlugin extends Plugin {
 		// Add settings tab
 		this.addSettingTab(new CrystalBoardsSettingTab(this.app, this));
 
+		// Setup global accent color change listener
+		this.setupAccentColorListener();
+
 		// Ensure Kanban folder exists
 		await this.ensureKanbanFolderExists();
 
@@ -103,6 +107,12 @@ export default class CrystalBoardsPlugin extends Plugin {
 
 	onunload() {
 		console.log('Unloading Crystal Boards plugin');
+		
+		// Clean up accent color listener
+		if (this.accentColorObserver) {
+			this.accentColorObserver.disconnect();
+			this.accentColorObserver = null;
+		}
 	}
 
 	async activateDashboardView(): Promise<void> {
@@ -199,5 +209,136 @@ export default class CrystalBoardsPlugin extends Plugin {
 			await leaf.open(view);
 			workspace.revealLeaf(leaf);
 		}
+	}
+
+	/**
+	 * Setup global accent color change listener
+	 * Monitors CSS custom property changes and refreshes all open plugin views
+	 */
+	private setupAccentColorListener(): void {
+		// Store current accent color to detect changes
+		let currentAccentColor = this.getCurrentAccentColor();
+		console.log('🎨 Crystal Boards: Initial accent color detected:', currentAccentColor);
+		
+		// Method 1: Use periodic checking (most reliable for CSS custom properties)
+		this.registerInterval(
+			window.setInterval(() => {
+				const newAccentColor = this.getCurrentAccentColor();
+				if (newAccentColor !== currentAccentColor && newAccentColor) {
+					console.log('🎨 Crystal Boards: Accent color changed from', currentAccentColor, 'to', newAccentColor);
+					currentAccentColor = newAccentColor;
+					this.refreshAllViews();
+				}
+			}, 1000) // Check every 1 second for responsiveness
+		);
+
+		// Method 2: Listen for Obsidian workspace events that might indicate theme changes
+		this.app.workspace.on('css-change', () => {
+			const newAccentColor = this.getCurrentAccentColor();
+			if (newAccentColor !== currentAccentColor && newAccentColor) {
+				console.log('🎨 Crystal Boards: Accent color changed via css-change event from', currentAccentColor, 'to', newAccentColor);
+				currentAccentColor = newAccentColor;
+				this.refreshAllViews();
+			}
+		});
+
+		// Method 3: MutationObserver for style elements and link elements (CSS files)
+		this.accentColorObserver = new MutationObserver((mutations) => {
+			let shouldCheck = false;
+			mutations.forEach((mutation) => {
+				// Check for changes to style elements or link elements
+				if (mutation.type === 'childList') {
+					mutation.addedNodes.forEach((node) => {
+						if (node.nodeType === Node.ELEMENT_NODE) {
+							const element = node as Element;
+							if (element.tagName === 'STYLE' || element.tagName === 'LINK') {
+								shouldCheck = true;
+							}
+						}
+					});
+				}
+				// Check for attribute changes on html/body
+				if (mutation.type === 'attributes' && (mutation.target === document.documentElement || mutation.target === document.body)) {
+					shouldCheck = true;
+				}
+			});
+			
+			if (shouldCheck) {
+				// Small delay to allow CSS to be processed
+				setTimeout(() => {
+					const newAccentColor = this.getCurrentAccentColor();
+					if (newAccentColor !== currentAccentColor && newAccentColor) {
+						console.log('🎨 Crystal Boards: Accent color changed via MutationObserver from', currentAccentColor, 'to', newAccentColor);
+						currentAccentColor = newAccentColor;
+						this.refreshAllViews();
+					}
+				}, 100);
+			}
+		});
+
+		// Observe head for style/link changes and body/html for class changes
+		this.accentColorObserver.observe(document.head, {
+			childList: true,
+			subtree: true
+		});
+		
+		this.accentColorObserver.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ['class', 'style']
+		});
+
+		this.accentColorObserver.observe(document.body, {
+			attributes: true,
+			attributeFilter: ['class', 'style']
+		});
+	}
+
+	/**
+	 * Get the current accent color from CSS custom properties
+	 */
+	private getCurrentAccentColor(): string {
+		const computedStyle = getComputedStyle(document.documentElement);
+		const accentColor = computedStyle.getPropertyValue('--interactive-accent').trim();
+		
+		// Also check for alternative accent color properties
+		if (!accentColor) {
+			const altAccent = computedStyle.getPropertyValue('--accent-color').trim();
+			if (altAccent) return altAccent;
+			
+			const themeAccent = computedStyle.getPropertyValue('--theme-accent').trim();
+			if (themeAccent) return themeAccent;
+		}
+		
+		return accentColor;
+	}
+
+	/**
+	 * Refresh all open Crystal Boards views when accent color changes
+	 */
+	private refreshAllViews(): void {
+		const { workspace } = this.app;
+
+		// Refresh all dashboard views
+		const dashboardLeaves = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE);
+		dashboardLeaves.forEach(async (leaf) => {
+			const view = leaf.view as DashboardView;
+			if (view && typeof view.renderDashboard === 'function') {
+				console.log('🔄 Refreshing dashboard view for accent color change');
+				await view.renderDashboard();
+			}
+		});
+
+		// Refresh all board views  
+		const boardLeaves = workspace.getLeavesOfType(BOARD_VIEW_TYPE);
+		boardLeaves.forEach(async (leaf) => {
+			const view = leaf.view as BoardView;
+			if (view && typeof view.renderBoard === 'function') {
+				console.log('🔄 Refreshing board view for accent color change');
+				await view.renderBoard();
+			}
+		});
+
+		// Force CSS recalculation by triggering a reflow
+		document.documentElement.style.setProperty('--crystal-boards-accent-update', Date.now().toString());
 	}
 }
