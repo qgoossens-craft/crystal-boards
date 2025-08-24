@@ -447,7 +447,9 @@
 .crystal-board-action-btn.crystal-board-delete-btn:hover {
 	background: var(--text-error) !important;
 	color: white !important;
+	border-color: var(--text-error) !important;
 	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 /* Modal Styles */
@@ -822,9 +824,11 @@
 }
 
 .crystal-column-delete-btn:hover {
-	background: var(--text-error);
-	color: var(--text-on-accent);
-	border-color: var(--text-error);
+	background: var(--text-error) !important;
+	color: white !important;
+	border-color: var(--text-error) !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 /* Column Cards */
@@ -973,9 +977,11 @@
 }
 
 .crystal-card-delete-btn:hover {
-	background: var(--text-error);
-	color: var(--text-on-accent);
-	border-color: var(--text-error);
+	background: var(--text-error) !important;
+	color: white !important;
+	border-color: var(--text-error) !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 /* Add Card Button */
@@ -1127,8 +1133,10 @@
 }
 
 .crystal-remove-image-btn:hover {
-	background: var(--text-error);
-	color: white;
+	background: var(--text-error) !important;
+	color: white !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 .crystal-image-search-results {
@@ -1247,8 +1255,10 @@
 }
 
 .crystal-remove-note-btn:hover {
-	background: var(--text-error);
-	color: white;
+	background: var(--text-error) !important;
+	color: white !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 .crystal-note-search-results {
@@ -1717,8 +1727,10 @@
 }
 
 .crystal-tag-remove:hover {
-	background: var(--text-error);
-	color: white;
+	background: var(--text-error) !important;
+	color: white !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 /* Notes */
@@ -1765,8 +1777,10 @@
 }
 
 .crystal-note-remove:hover {
-	background: var(--text-error);
-	color: white;
+	background: var(--text-error) !important;
+	color: white !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 .crystal-search-results {
@@ -1855,8 +1869,10 @@
 }
 
 .crystal-todo-remove:hover {
-	background: var(--text-error);
-	color: white;
+	background: var(--text-error) !important;
+	color: white !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 /* Research URLs */
@@ -1941,8 +1957,10 @@
 }
 
 .crystal-url-remove:hover {
-	background: var(--text-error);
-	color: white;
+	background: var(--text-error) !important;
+	color: white !important;
+	transform: scale(1.05);
+	transition: all 0.2s ease;
 }
 
 /* Card Display Enhancements */
