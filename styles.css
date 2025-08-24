@@ -1650,6 +1650,148 @@
 	margin-bottom: 0;
 }
 
+/* Enhanced Description Section - Most Important Element */
+.crystal-section-description {
+	padding: 2rem 1.5rem !important;
+	background: linear-gradient(135deg, var(--background-primary) 0%, var(--background-primary-alt) 100%);
+	border: 2px solid var(--background-modifier-border);
+	margin: 1rem 0 !important;
+	position: relative;
+}
+
+.crystal-section-description::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	background: var(--interactive-accent);
+	border-radius: 8px 8px 0 0;
+}
+
+.crystal-description-header {
+	margin-bottom: 1rem;
+	display: flex;
+	align-items: baseline;
+	gap: 1rem;
+}
+
+.crystal-description-title {
+	margin: 0;
+	font-size: 1.3rem;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.crystal-description-subtitle {
+	font-size: 0.9rem;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.crystal-description-container {
+	position: relative;
+}
+
+.crystal-description-textarea {
+	width: 100%;
+	min-height: 200px;
+	max-height: 500px;
+	padding: 1rem;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-family: inherit;
+	font-size: 1rem;
+	line-height: 1.6;
+	resize: vertical;
+	transition: all 0.3s ease;
+	overflow-y: auto;
+}
+
+.crystal-description-textarea:focus {
+	outline: none;
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 3px rgba(var(--interactive-accent-rgb), 0.1);
+	background: var(--background-primary);
+}
+
+.crystal-description-textarea:hover {
+	border-color: var(--background-modifier-border-hover);
+}
+
+/* Beautiful placeholder styling */
+.crystal-description-textarea::placeholder {
+	color: var(--text-faint);
+	font-size: 0.95rem;
+	line-height: 1.8;
+	opacity: 0.7;
+}
+
+.crystal-description-char-count {
+	position: absolute;
+	bottom: -1.5rem;
+	right: 0;
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	padding: 0.25rem 0.5rem;
+	background: var(--background-secondary);
+	border-radius: 4px;
+	opacity: 0.7;
+	transition: opacity 0.2s ease;
+}
+
+.crystal-description-char-count:hover {
+	opacity: 1;
+}
+
+.crystal-description-char-count.empty {
+	color: var(--text-faint);
+	font-style: italic;
+}
+
+/* Markdown Description Display Mode */
+.crystal-description-display {
+	width: 100%;
+	min-height: 200px;
+	padding: 1rem;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 8px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-family: inherit;
+	font-size: 1rem;
+	line-height: 1.6;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	overflow-y: auto;
+}
+
+.crystal-description-display:hover {
+	border-color: var(--background-modifier-border-hover);
+	background: var(--background-modifier-hover);
+}
+
+.crystal-description-display .crystal-description-placeholder {
+	color: var(--text-faint);
+	font-style: italic;
+	opacity: 0.7;
+}
+
+/* Edit mode for textarea */
+.crystal-description-textarea.crystal-description-edit {
+	display: none;
+}
+
+/* Important separator after description */
+.crystal-separator-important {
+	margin: 2rem 0 !important;
+	height: 2px;
+	background: linear-gradient(90deg, transparent, var(--background-modifier-border), transparent);
+}
+
 .crystal-section-title {
 	margin: 0 0 1rem 0;
 	color: var(--text-normal);

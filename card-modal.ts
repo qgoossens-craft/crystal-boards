@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TFile, MarkdownRenderer } from 'obsidian';
+import { App, Modal, Setting, TFile, MarkdownRenderer, Component } from 'obsidian';
 import CrystalBoardsPlugin from './main';
 import { Card, TodoItem, ResearchUrl } from './types';
 import { LinkManager } from './link-manager';
@@ -97,22 +97,122 @@ export class CardModal extends Modal {
 		// Separator after Tags
 		scrollEl.createEl('div', { cls: 'crystal-section-separator' });
 
-		// Section 3: Description (light background)
-		const descriptionSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-light' });
-		new Setting(descriptionSection)
-			.setName('Description')
-			.setDesc('Detailed description of the card')
-			.addTextArea((textArea) => {
-				textArea.setPlaceholder('Enter description...')
-					.setValue(this.cardDescription)
-					.onChange((value) => {
-						this.cardDescription = value;
-					});
-				textArea.inputEl.style.minHeight = '120px'; // Increased from 80px
-			});
+		// Section 3: Description (PROMINENT - Most Important Section)
+		const descriptionSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-description crystal-section-light' });
+		
+		// Custom description header with emphasis
+		const descHeader = descriptionSection.createEl('div', { cls: 'crystal-description-header' });
+		descHeader.createEl('h3', { 
+			text: 'Description',
+			cls: 'crystal-description-title'
+		});
+		descHeader.createEl('span', { 
+			text: 'Primary content of the card',
+			cls: 'crystal-description-subtitle'
+		});
+		
+		// Large, prominent description area with markdown support
+		const descContainer = descriptionSection.createEl('div', { cls: 'crystal-description-container' });
+		
+		// Create markdown display and edit elements
+		const descDisplayDiv = descContainer.createEl('div', { cls: 'crystal-description-display' });
+		const descTextarea = descContainer.createEl('textarea', {
+			cls: 'crystal-description-textarea crystal-description-edit',
+			placeholder: `Enter a detailed description of this card. This is the main content that will be displayed prominently in the card view.
 
-		// Separator after Description
-		scrollEl.createEl('div', { cls: 'crystal-section-separator' });
+You can include:
+• Key objectives and goals
+• Important context and background  
+• Detailed requirements or specifications
+• Any relevant notes or considerations`,
+			value: this.cardDescription
+		});
+		
+		// Initially hide the textarea
+		descTextarea.style.display = 'none';
+		
+		// Set up markdown rendering
+		const renderMarkdown = async () => {
+			descDisplayDiv.empty();
+			if (this.cardDescription.trim()) {
+				await MarkdownRenderer.renderMarkdown(
+					this.cardDescription, 
+					descDisplayDiv, 
+					'', 
+					new Component()
+				);
+			} else {
+				descDisplayDiv.createEl('div', {
+					cls: 'crystal-description-placeholder',
+					text: 'Click to add a description...'
+				});
+			}
+		};
+		
+		// Initial render
+		renderMarkdown();
+		
+		// Toggle between view and edit modes
+		const switchToEditMode = () => {
+			descTextarea.value = this.cardDescription; // Set current content
+			descDisplayDiv.style.display = 'none';
+			descTextarea.style.display = 'block';
+			descTextarea.style.minHeight = '200px';
+			autoResize(); // Resize to fit content
+			updateCharCount(); // Update character count
+			descTextarea.focus();
+		};
+		
+		const switchToViewMode = () => {
+			this.cardDescription = descTextarea.value;
+			descTextarea.style.display = 'none';
+			descDisplayDiv.style.display = 'block';
+			renderMarkdown();
+		};
+		
+		// Click display to edit
+		descDisplayDiv.addEventListener('click', switchToEditMode);
+		
+		// Auto-resize textarea
+		const autoResize = () => {
+			descTextarea.style.height = 'auto';
+			const scrollHeight = descTextarea.scrollHeight;
+			descTextarea.style.height = Math.min(scrollHeight, 500) + 'px';
+		};
+		
+		// Initial resize
+		setTimeout(autoResize, 0);
+		
+		// Updated event handlers for markdown mode
+		descTextarea.addEventListener('input', () => {
+			this.cardDescription = descTextarea.value;
+			autoResize();
+			updateCharCount();
+		});
+		
+		// Exit edit mode on blur or Escape
+		descTextarea.addEventListener('blur', switchToViewMode);
+		descTextarea.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape') {
+				switchToViewMode();
+			}
+		});
+		
+		// Character count indicator
+		const charCount = descContainer.createEl('div', { cls: 'crystal-description-char-count' });
+		const updateCharCount = () => {
+			const count = this.cardDescription.length;
+			charCount.textContent = `${count} characters`;
+			if (count === 0) {
+				charCount.addClass('empty');
+			} else {
+				charCount.removeClass('empty');
+			}
+		};
+		updateCharCount();
+
+		// Separator after Description (with extra margin since this is important)
+		const separator = scrollEl.createEl('div', { cls: 'crystal-section-separator crystal-separator-important' });
 
 		// Section 4: Linked Notes (dark background)
 		const notesSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-dark' });

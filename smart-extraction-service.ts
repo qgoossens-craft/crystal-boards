@@ -585,11 +585,23 @@ export class SmartExtractionService {
 		const urlContext = urlSummaries.length > 0 ? urlSummaries.join('\n\n') : undefined;
 		const aiAnalysis = await this.openAIService.analyzeTask(task, urlContext);
 
-		// Step 3: Create enhanced smart card
+		// Step 3: Build comprehensive card description combining AI analysis and URL summaries
+		let cardDescription = aiAnalysis.description;
+		
+		// Add URL summaries to the main card description if they exist
+		if (urlSummaries.length > 0) {
+			cardDescription += '\n\n📚 **Research Summary:**\n';
+			urlSummaries.forEach((summary, index) => {
+				const urlTitle = enhancedUrls[index]?.title || `URL ${index + 1}`;
+				cardDescription += `\n**${urlTitle}:**\n${summary}\n`;
+			});
+		}
+
+		// Step 4: Create enhanced smart card
 		const smartCard: SmartCard = {
 			id: `smart-card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			title: `${this.plugin.settings.smartExtractPrefix || '🤖 '}${task.cleanText}`,
-			description: aiAnalysis.description,
+			description: cardDescription, // ← Now includes AI analysis + URL summaries
 			tags: task.tags,
 			noteLinks: [],
 			todos: aiAnalysis.nextSteps.map(step => ({
@@ -602,7 +614,7 @@ export class SmartExtractionService {
 				id: `url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 				url: url.url,
 				title: url.title,
-				description: (url as any).summary,
+				description: `🔗 Reference link for research`, // Keep URL descriptions simple
 				created: Date.now(),
 				status: 'unread' as const,
 				importance: 'medium' as const
