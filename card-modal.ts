@@ -342,19 +342,152 @@ You can include:
 		const notesDisplay = section.createEl('div', { cls: 'crystal-notes-display' });
 		this.updateNotesDisplay(notesDisplay);
 
-		// Note search
-		new Setting(section)
-			.setName('Add Note')
-			.setDesc('Search for notes to link to this card')
-			.addText((text) => {
-				text.setPlaceholder('Search notes...')
-					.onChange((searchTerm) => {
-						this.searchNotes(searchTerm, section);
-					});
-			});
+		// Enhanced note search container
+		const searchContainer = section.createEl('div', { cls: 'crystal-note-search-container' });
+		
+		// Search header
+		const searchHeader = searchContainer.createEl('div', { cls: 'crystal-search-header' });
+		searchHeader.createEl('h4', { 
+			text: '🔗 Link a Note', 
+			cls: 'crystal-search-title' 
+		});
+		searchHeader.createEl('span', { 
+			text: 'Search your vault to connect relevant notes', 
+			cls: 'crystal-search-subtitle' 
+		});
 
-		// Search results container
-		section.createEl('div', { cls: 'crystal-note-search-results' });
+		// Search input with enhanced styling
+		const inputContainer = searchContainer.createEl('div', { cls: 'crystal-search-input-container' });
+		
+		const searchIcon = inputContainer.createEl('span', { 
+			cls: 'crystal-search-icon',
+			text: '🔍'
+		});
+		
+		const searchInput = inputContainer.createEl('input', {
+			type: 'text',
+			cls: 'crystal-search-input',
+			placeholder: 'Search notes by name, path, or content...',
+			attr: {
+				'autocomplete': 'off',
+				'spellcheck': 'false'
+			}
+		});
+
+		const clearBtn = inputContainer.createEl('button', {
+			cls: 'crystal-search-clear',
+			text: '×',
+			attr: { 'aria-label': 'Clear search' }
+		});
+		clearBtn.style.display = 'none';
+
+		// Search results container with loading state
+		const resultsContainer = searchContainer.createEl('div', { cls: 'crystal-search-results-container' });
+		
+		// Search status/help text
+		const searchStatus = resultsContainer.createEl('div', { cls: 'crystal-search-status' });
+
+		// Keyboard navigation state
+		let selectedIndex = -1;
+		let searchTimeout: NodeJS.Timeout | null = null;
+
+		// Enhanced search functionality
+		const performSearch = async (searchTerm: string) => {
+			// Clear previous timeout
+			if (searchTimeout) {
+				clearTimeout(searchTimeout);
+			}
+
+			// Update UI state
+			clearBtn.style.display = searchTerm ? 'block' : 'none';
+			searchIcon.textContent = searchTerm ? '⏳' : '🔍';
+			selectedIndex = -1;
+
+			// Clear results
+			const existingResults = resultsContainer.querySelector('.crystal-search-results');
+			if (existingResults) {
+				existingResults.remove();
+			}
+
+			if (!searchTerm.trim()) {
+				// Show recently modified notes when no search term
+				this.showRecentNotes(resultsContainer, searchStatus);
+				return;
+			}
+
+			// Show searching state
+			searchStatus.textContent = 'Searching...';
+			searchStatus.className = 'crystal-search-status searching';
+
+			// Debounce search
+			searchTimeout = setTimeout(async () => {
+				try {
+					const results = await this.performEnhancedSearch(searchTerm);
+					this.displaySearchResults(results, resultsContainer, searchStatus, searchInput);
+					searchIcon.textContent = '🔍';
+				} catch (error) {
+					console.error('Search error:', error);
+					searchStatus.textContent = 'Search failed. Please try again.';
+					searchStatus.className = 'crystal-search-status error';
+					searchIcon.textContent = '⚠️';
+				}
+			}, 300);
+		};
+
+		// Event listeners
+		searchInput.addEventListener('input', (e) => {
+			const target = e.target as HTMLInputElement;
+			performSearch(target.value);
+		});
+
+		searchInput.addEventListener('focus', () => {
+			if (!searchInput.value.trim()) {
+				this.showRecentNotes(resultsContainer, searchStatus);
+			}
+		});
+
+		// Clear button functionality
+		clearBtn.addEventListener('click', () => {
+			searchInput.value = '';
+			searchInput.focus();
+			performSearch('');
+		});
+
+		// Keyboard navigation
+		searchInput.addEventListener('keydown', (e) => {
+			const results = resultsContainer.querySelectorAll('.crystal-search-result');
+			
+			switch (e.key) {
+				case 'ArrowDown':
+					e.preventDefault();
+					selectedIndex = Math.min(selectedIndex + 1, results.length - 1);
+					this.updateSelection(results, selectedIndex);
+					break;
+				case 'ArrowUp':
+					e.preventDefault();
+					selectedIndex = Math.max(selectedIndex - 1, -1);
+					this.updateSelection(results, selectedIndex);
+					break;
+				case 'Enter':
+					e.preventDefault();
+					if (selectedIndex >= 0 && results[selectedIndex]) {
+						(results[selectedIndex] as HTMLElement).click();
+					}
+					break;
+				case 'Escape':
+					e.preventDefault();
+					searchInput.blur();
+					const existingResults = resultsContainer.querySelector('.crystal-search-results');
+					if (existingResults) {
+						existingResults.remove();
+					}
+					searchStatus.textContent = '';
+					break;
+			}
+		});
+
+		// Initial state - show recent notes
+		this.showRecentNotes(resultsContainer, searchStatus);
 	}
 
 	private updateNotesDisplay(container: HTMLElement): void {
@@ -397,49 +530,324 @@ You can include:
 		});
 	}
 
-	private searchNotes(searchTerm: string, container: HTMLElement): void {
-		const searchResultsEl = container.querySelector('.crystal-note-search-results') as HTMLElement;
-		if (!searchResultsEl) return;
+	private async performEnhancedSearch(searchTerm: string): Promise<any[]> {
+		const searchTermLower = searchTerm.toLowerCase();
+		const results: any[] = [];
 
-		searchResultsEl.empty();
+		// First, search by filename (highest priority)
+		const filenameMatches = this.allMarkdownFiles
+			.filter(file => !this.cardNoteLinks.includes(file.path))
+			.map(file => {
+				const nameScore = this.calculateMatchScore(file.basename.toLowerCase(), searchTermLower);
+				const pathScore = this.calculateMatchScore(file.path.toLowerCase(), searchTermLower);
+				return {
+					file,
+					score: Math.max(nameScore, pathScore),
+					matchType: nameScore > pathScore ? 'name' : 'path',
+					preview: ''
+				};
+			})
+			.filter(result => result.score > 0)
+			.sort((a, b) => b.score - a.score)
+			.slice(0, 12);
 
-		if (!searchTerm.trim()) {
-			this.noteSearchResults = [];
+		// Add content search for top filename matches
+		for (const result of filenameMatches.slice(0, 8)) {
+			try {
+				const content = await this.app.vault.read(result.file);
+				const contentMatch = this.findContentMatch(content, searchTerm);
+				if (contentMatch.found || result.score > 0.3) {
+					result.preview = contentMatch.preview;
+					result.contentScore = contentMatch.score;
+					result.totalScore = result.score + (contentMatch.score * 0.3);
+					results.push(result);
+				}
+			} catch (error) {
+				// Still include if filename matched well
+				if (result.score > 0.3) {
+					result.preview = 'Unable to preview content';
+					results.push(result);
+				}
+			}
+		}
+
+		// Sort by total score
+		results.sort((a, b) => (b.totalScore || b.score) - (a.totalScore || a.score));
+
+		return results.slice(0, 8);
+	}
+
+	private displaySearchResults(results: any[], container: HTMLElement, statusEl: HTMLElement, searchInput: HTMLInputElement): void {
+		// Remove existing results
+		const existingResults = container.querySelector('.crystal-search-results');
+		if (existingResults) {
+			existingResults.remove();
+		}
+
+		if (results.length === 0) {
+			statusEl.textContent = 'No matching notes found. Try a different search term.';
+			statusEl.className = 'crystal-search-status empty';
 			return;
 		}
 
-		this.noteSearchResults = this.allMarkdownFiles
-			.filter(file => 
-				file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				file.path.toLowerCase().includes(searchTerm.toLowerCase())
-			)
-			.filter(file => !this.cardNoteLinks.includes(file.path))
-			.slice(0, 8);
+		statusEl.textContent = `Found ${results.length} matching note${results.length === 1 ? '' : 's'}`;
+		statusEl.className = 'crystal-search-status success';
 
-		if (this.noteSearchResults.length > 0) {
-			const resultsContainer = searchResultsEl.createEl('div', { cls: 'crystal-search-results' });
+		const resultsEl = container.createEl('div', { cls: 'crystal-search-results' });
+
+		results.forEach((result, index) => {
+			const resultEl = resultsEl.createEl('div', { cls: 'crystal-search-result' });
 			
-			this.noteSearchResults.forEach(file => {
-				const resultEl = resultsContainer.createEl('div', { cls: 'crystal-search-result' });
-				resultEl.createEl('span', { text: file.basename });
-				resultEl.createEl('span', { 
-					text: file.path,
-					cls: 'crystal-note-path'
-				});
-				
-				resultEl.onclick = () => {
-					if (!this.cardNoteLinks.includes(file.path)) {
-						this.cardNoteLinks.push(file.path);
-						this.updateNotesDisplay(container.querySelector('.crystal-notes-display') as HTMLElement);
-						searchResultsEl.empty();
-						
-						// Clear search input
-						const searchInput = container.querySelector('input') as HTMLInputElement;
-						if (searchInput) searchInput.value = '';
-					}
-				};
+			// Note icon and title
+			const headerEl = resultEl.createEl('div', { cls: 'crystal-result-header' });
+			
+			const iconEl = headerEl.createEl('span', { cls: 'crystal-result-icon' });
+			iconEl.textContent = this.getNoteIcon(result.file);
+			
+			const titleEl = headerEl.createEl('span', { 
+				cls: 'crystal-result-title',
+				text: result.file.basename 
 			});
+			
+			// Match type indicator
+			const matchEl = headerEl.createEl('span', { cls: 'crystal-result-match-type' });
+			matchEl.textContent = result.matchType === 'name' ? '📝 Name' : 
+								 result.matchType === 'path' ? '📁 Path' : '📄 Content';
+			
+			// Path
+			const pathEl = resultEl.createEl('div', { 
+				cls: 'crystal-result-path',
+				text: result.file.path 
+			});
+			
+			// Preview
+			if (result.preview) {
+				const previewEl = resultEl.createEl('div', { 
+					cls: 'crystal-result-preview',
+					text: result.preview 
+				});
+			}
+
+			// Metadata
+			const metaEl = resultEl.createEl('div', { cls: 'crystal-result-metadata' });
+			const lastModified = new Date(result.file.stat.mtime);
+			metaEl.createEl('span', { 
+				cls: 'crystal-result-date',
+				text: `Modified: ${this.formatDate(lastModified)}`
+			});
+			
+			// Click handler
+			resultEl.addEventListener('click', () => {
+				this.addNoteLink(result.file, container, searchInput);
+			});
+
+			// Keyboard selection support
+			resultEl.addEventListener('mouseenter', () => {
+				// Update selection on hover
+				const allResults = resultsEl.querySelectorAll('.crystal-search-result');
+				allResults.forEach(r => r.classList.remove('selected'));
+				resultEl.classList.add('selected');
+			});
+		});
+	}
+
+	private showRecentNotes(container: HTMLElement, statusEl: HTMLElement): void {
+		// Remove existing results
+		const existingResults = container.querySelector('.crystal-search-results');
+		if (existingResults) {
+			existingResults.remove();
 		}
+
+		// Get recently modified notes
+		const recentNotes = this.allMarkdownFiles
+			.filter(file => !this.cardNoteLinks.includes(file.path))
+			.sort((a, b) => b.stat.mtime - a.stat.mtime)
+			.slice(0, 6);
+
+		if (recentNotes.length === 0) {
+			statusEl.textContent = 'No notes available to link.';
+			statusEl.className = 'crystal-search-status empty';
+			return;
+		}
+
+		statusEl.textContent = 'Recently modified notes - or start typing to search';
+		statusEl.className = 'crystal-search-status recent';
+
+		const resultsEl = container.createEl('div', { cls: 'crystal-search-results recent-notes' });
+
+		recentNotes.forEach(file => {
+			const resultEl = resultsEl.createEl('div', { cls: 'crystal-search-result recent-note' });
+			
+			const headerEl = resultEl.createEl('div', { cls: 'crystal-result-header' });
+			
+			const iconEl = headerEl.createEl('span', { cls: 'crystal-result-icon' });
+			iconEl.textContent = this.getNoteIcon(file);
+			
+			const titleEl = headerEl.createEl('span', { 
+				cls: 'crystal-result-title',
+				text: file.basename 
+			});
+
+			const recentEl = headerEl.createEl('span', { 
+				cls: 'crystal-recent-indicator',
+				text: '🕒 Recent'
+			});
+			
+			const pathEl = resultEl.createEl('div', { 
+				cls: 'crystal-result-path',
+				text: file.path 
+			});
+
+			const metaEl = resultEl.createEl('div', { cls: 'crystal-result-metadata' });
+			const lastModified = new Date(file.stat.mtime);
+			metaEl.createEl('span', { 
+				cls: 'crystal-result-date',
+				text: `Modified: ${this.formatDate(lastModified)}`
+			});
+			
+			resultEl.addEventListener('click', () => {
+				const searchInput = container.closest('.crystal-note-search-container')?.querySelector('.crystal-search-input') as HTMLInputElement;
+				this.addNoteLink(file, container, searchInput);
+			});
+		});
+	}
+
+	private addNoteLink(file: any, container: HTMLElement, searchInput: HTMLInputElement): void {
+		if (!this.cardNoteLinks.includes(file.path)) {
+			this.cardNoteLinks.push(file.path);
+			
+			// Update notes display
+			const notesDisplay = container.closest('.crystal-card-section')?.querySelector('.crystal-notes-display') as HTMLElement;
+			if (notesDisplay) {
+				this.updateNotesDisplay(notesDisplay);
+			}
+			
+			// Clear search and hide results
+			searchInput.value = '';
+			const resultsContainer = container.closest('.crystal-note-search-container')?.querySelector('.crystal-search-results-container') as HTMLElement;
+			const existingResults = resultsContainer?.querySelector('.crystal-search-results');
+			if (existingResults) {
+				existingResults.remove();
+			}
+			
+			// Show recent notes again
+			const statusEl = resultsContainer?.querySelector('.crystal-search-status') as HTMLElement;
+			if (statusEl && resultsContainer) {
+				this.showRecentNotes(resultsContainer, statusEl);
+			}
+
+			// Focus back to search for easy addition of more notes
+			setTimeout(() => searchInput.focus(), 100);
+		}
+	}
+
+	private updateSelection(results: NodeListOf<Element>, selectedIndex: number): void {
+		results.forEach((result, index) => {
+			if (index === selectedIndex) {
+				result.classList.add('selected');
+				result.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+			} else {
+				result.classList.remove('selected');
+			}
+		});
+	}
+
+	private getNoteIcon(file: any): string {
+		// Simple logic to assign icons based on filename or path
+		const name = file.basename.toLowerCase();
+		const path = file.path.toLowerCase();
+		
+		if (name.includes('todo') || name.includes('task')) return '✅';
+		if (name.includes('idea') || name.includes('brainstorm')) return '💡';
+		if (name.includes('meeting') || name.includes('notes')) return '📝';
+		if (name.includes('project')) return '🚀';
+		if (name.includes('research')) return '🔬';
+		if (path.includes('daily') || path.includes('journal')) return '📅';
+		if (path.includes('template')) return '📋';
+		
+		return '📄';
+	}
+
+	private formatDate(date: Date): string {
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+		
+		if (diffDays === 0) return 'Today';
+		if (diffDays === 1) return 'Yesterday';
+		if (diffDays < 7) return `${diffDays} days ago`;
+		if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+		if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+		
+		return date.toLocaleDateString();
+	}
+
+	private calculateMatchScore(text: string, searchTerm: string): number {
+		if (!text || !searchTerm) return 0;
+
+		// Exact match
+		if (text === searchTerm) return 1.0;
+		
+		// Starts with
+		if (text.startsWith(searchTerm)) return 0.9;
+		
+		// Contains as whole word
+		const wordBoundary = new RegExp(`\\b${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+		if (wordBoundary.test(text)) return 0.8;
+		
+		// Contains substring
+		if (text.includes(searchTerm)) return 0.6;
+		
+		// Fuzzy match (simple)
+		let score = 0;
+		let searchIndex = 0;
+		for (let i = 0; i < text.length && searchIndex < searchTerm.length; i++) {
+			if (text[i] === searchTerm[searchIndex]) {
+				searchIndex++;
+				score += 1;
+			}
+		}
+		
+		if (searchIndex === searchTerm.length) {
+			return 0.3 * (score / text.length);
+		}
+		
+		return 0;
+	}
+
+	private findContentMatch(content: string, searchTerm: string): { found: boolean; score: number; preview: string } {
+		const searchTermLower = searchTerm.toLowerCase();
+		const contentLower = content.toLowerCase();
+		
+		if (!contentLower.includes(searchTermLower)) {
+			return { found: false, score: 0, preview: this.getContentPreview(content) };
+		}
+
+		const index = contentLower.indexOf(searchTermLower);
+		const lineStart = Math.max(0, content.lastIndexOf('\n', index - 1) + 1);
+		const lineEnd = content.indexOf('\n', index + searchTerm.length);
+		const line = content.substring(lineStart, lineEnd !== -1 ? lineEnd : content.length);
+		
+		// Extract context around match
+		const previewStart = Math.max(0, index - 50);
+		const previewEnd = Math.min(content.length, index + searchTerm.length + 50);
+		let preview = content.substring(previewStart, previewEnd).trim();
+		
+		// Add ellipsis if truncated
+		if (previewStart > 0) preview = '...' + preview;
+		if (previewEnd < content.length) preview = preview + '...';
+		
+		return {
+			found: true,
+			score: 0.5,
+			preview: preview || line.trim()
+		};
+	}
+
+	private getContentPreview(content: string): string {
+		// Get first meaningful line
+		const lines = content.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+		return lines[0]?.trim().substring(0, 100) + (lines[0]?.length > 100 ? '...' : '') || 'Empty note';
 	}
 
 	private renderTodosSection(container: HTMLElement): void {
