@@ -1378,7 +1378,7 @@
 
 .crystal-card-modal-title {
 	margin: 0 0 1rem 0;
-	color: var(--text-normal);
+	color: var(--interactive-accent);     /* Obsidian accent color */
 	font-size: 1.4rem;
 	font-weight: 600;
 }
@@ -1423,6 +1423,102 @@
 	background: var(--interactive-accent-hover);
 }
 
+/* Card Modal Field Styling - Make Title and Description Fields Bigger */
+.crystal-card-modal .setting-item .setting-item-control input[type="text"] {
+	min-width: 400px !important;
+	width: 100% !important;
+	font-size: 1rem !important;           /* Reduced from 1.1rem to standard size */
+	padding: 0.5rem 0.75rem !important;   /* Reduced padding for normal appearance */
+	min-height: 38px !important;          /* Reduced from 45px to standard height */
+}
+
+.crystal-card-modal .setting-item .setting-item-control textarea {
+	min-width: 400px !important;
+	width: 100% !important;
+	font-size: 0.9rem !important;          /* Slightly smaller for description text */
+	padding: 0.5rem 0.75rem !important;   /* Reduced padding for standard appearance */
+	min-height: 140px !important;         /* Reduced from 180px - still large but not oversized */
+	resize: vertical !important;
+}
+
+.crystal-card-modal .setting-item {
+	padding: 0.75rem 0 !important;        /* Reduced spacing for normal appearance */
+}
+
+.crystal-card-modal .setting-item-info {
+	margin-bottom: 0.5rem !important;     /* Reduced spacing */
+}
+
+.crystal-card-modal .setting-item-name {
+	font-size: 1rem !important;           /* Reduced to standard size */
+	font-weight: 600 !important;
+	color: var(--interactive-accent) !important; /* Obsidian accent color */
+}
+
+.crystal-card-modal .setting-item-description {
+	font-size: 0.9rem !important;
+	color: var(--text-muted) !important;
+	margin-top: 0.25rem !important;
+}
+
+/* Tags Section - Compact styling for better organization */
+.crystal-card-modal .crystal-card-section {
+	margin: 0.5rem 0 !important;          /* Reduced margin for standard spacing */
+	padding: 0.5rem 0 !important;         /* Reduced padding */
+	/* Removed border-bottom since we now have proper separators */
+}
+
+.crystal-card-modal .crystal-section-title {
+	font-size: 1rem !important;           /* Reduced to match other titles */
+	font-weight: 600 !important;
+	color: var(--interactive-accent) !important; /* Obsidian accent color */
+	margin: 0 0 0.5rem 0 !important;
+}
+
+.crystal-card-modal .crystal-tags-display {
+	margin-bottom: 0.5rem !important;     /* Reduced for tighter spacing */
+}
+
+.crystal-card-modal .crystal-card-section .setting-item {
+	padding: 0.5rem 0 !important;
+	border-top: none !important;
+}
+
+/* Remove ALL borders from Setting items in the modal */
+.crystal-card-modal .setting-item {
+	border-top: none !important;
+	border-bottom: none !important;
+	border-left: none !important;
+	border-right: none !important;
+}
+
+/* Visual Section Separator */
+.crystal-card-modal .crystal-section-separator {
+	height: 2px;                          /* Made thicker for better visibility */
+	background: var(--background-modifier-border);
+	margin: 1.5rem 0 !important;          /* Standard Obsidian spacing */
+	opacity: 0.6;                         /* More visible than before */
+	width: 100%;                          /* Full width to match native separators */
+	border: none;                         /* Clean separator line */
+	border-radius: 1px;                   /* Slightly rounded for softer appearance */
+}
+
+/* Alternating Section Backgrounds */
+.crystal-modal-section {
+	padding: 1.5rem 1.25rem;             /* Generous padding for sections */
+	border-radius: 8px;                   /* Rounded corners for modern look */
+	margin: 0;                           /* No margin, separators handle spacing */
+	transition: background-color 0.2s ease;
+}
+
+.crystal-section-light {
+	background: var(--background-primary); /* Default light background */
+}
+
+.crystal-section-dark {
+	background: var(--background-secondary); /* Slightly darker alternate background */
+}
+
 /* Progress Bar */
 .crystal-progress-container {
 	margin-top: 1rem;
@@ -1454,7 +1550,7 @@
 .crystal-card-section {
 	margin-bottom: 2rem;
 	padding-bottom: 1.5rem;
-	border-bottom: 1px solid var(--background-modifier-border);
+	/* Removed border-bottom - we now use manual separators only where needed */
 }
 
 .crystal-card-section:last-child {

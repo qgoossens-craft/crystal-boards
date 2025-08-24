@@ -73,8 +73,9 @@ export class CardModal extends Modal {
 		// Scrollable content area
 		const scrollEl = contentEl.createEl('div', { cls: 'crystal-card-modal-content' });
 
-		// Card Title
-		new Setting(scrollEl)
+		// Section 1: Title (light background)
+		const titleSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-light' });
+		new Setting(titleSection)
 			.setName('Title')
 			.setDesc('Card title')
 			.addText((text) => {
@@ -86,8 +87,19 @@ export class CardModal extends Modal {
 				text.inputEl.focus();
 			});
 
-		// Card Description
-		new Setting(scrollEl)
+		// Separator after Title
+		scrollEl.createEl('div', { cls: 'crystal-section-separator' });
+
+		// Section 2: Tags (dark background)
+		const tagsSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-dark' });
+		this.renderTagsSection(tagsSection);
+
+		// Separator after Tags
+		scrollEl.createEl('div', { cls: 'crystal-section-separator' });
+
+		// Section 3: Description (light background)
+		const descriptionSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-light' });
+		new Setting(descriptionSection)
 			.setName('Description')
 			.setDesc('Detailed description of the card')
 			.addTextArea((textArea) => {
@@ -96,20 +108,29 @@ export class CardModal extends Modal {
 					.onChange((value) => {
 						this.cardDescription = value;
 					});
-				textArea.inputEl.style.minHeight = '80px';
+				textArea.inputEl.style.minHeight = '120px'; // Increased from 80px
 			});
 
-		// Tags Section
-		this.renderTagsSection(scrollEl);
+		// Separator after Description
+		scrollEl.createEl('div', { cls: 'crystal-section-separator' });
 
-		// Linked Notes Section
-		this.renderNotesSection(scrollEl);
+		// Section 4: Linked Notes (dark background)
+		const notesSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-dark' });
+		this.renderNotesSection(notesSection);
 
-		// Todos Section
-		this.renderTodosSection(scrollEl);
+		// Separator after Linked Notes
+		scrollEl.createEl('div', { cls: 'crystal-section-separator' });
 
-		// Research URLs Section
-		this.renderResearchSection(scrollEl);
+		// Section 5: Todos (light background)
+		const todosSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-light' });
+		this.renderTodosSection(todosSection);
+
+		// Separator after Todos
+		scrollEl.createEl('div', { cls: 'crystal-section-separator' });
+
+		// Section 6: Research URLs (dark background)
+		const urlsSection = scrollEl.createEl('div', { cls: 'crystal-modal-section crystal-section-dark' });
+		this.renderResearchSection(urlsSection);
 
 		// Modal footer with buttons
 		const footerEl = contentEl.createEl('div', { cls: 'crystal-card-modal-footer' });
