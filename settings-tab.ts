@@ -102,6 +102,16 @@ export class CrystalBoardsSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Smart Extract Prefix')
+			.setDesc('Prefix to add to Smart Extract task titles (e.g., "🤖 " or "[AI] ")')
+			.addText(text => text
+				.setPlaceholder('🤖 ')
+				.setValue(this.plugin.settings.smartExtractPrefix || '')
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ smartExtractPrefix: value });
+				}));
+
+		new Setting(containerEl)
 			.setName('Remove Extracted Tasks')
 			.setDesc('Remove tasks from source note after extracting them to boards')
 			.addToggle(toggle => toggle

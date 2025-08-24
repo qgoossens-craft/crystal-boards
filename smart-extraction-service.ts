@@ -11,6 +11,7 @@ export interface SmartExtractApproval {
 	modifications: Record<string, {
 		title?: string;
 		description?: string;
+		context?: string;
 		nextSteps?: string[];
 	}>;
 }
@@ -166,6 +167,9 @@ export class SmartExtractionService {
 						const modifications = approval.modifications[cardId];
 						if (modifications.title) smartCard.title = modifications.title;
 						if (modifications.description) smartCard.description = modifications.description;
+						if (modifications.context && smartCard.aiAnalysis) {
+							smartCard.aiAnalysis.context = modifications.context;
+						}
 						if (modifications.nextSteps) {
 							smartCard.todos = modifications.nextSteps.map((step: string) => ({
 								id: `todo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -584,7 +588,7 @@ export class SmartExtractionService {
 		// Step 3: Create enhanced smart card
 		const smartCard: SmartCard = {
 			id: `smart-card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-			title: `${this.plugin.settings.extractedTaskPrefix || '📥 '}${task.cleanText}`,
+			title: `${this.plugin.settings.smartExtractPrefix || '🤖 '}${task.cleanText}`,
 			description: aiAnalysis.description,
 			tags: task.tags,
 			noteLinks: [],

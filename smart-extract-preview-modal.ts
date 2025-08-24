@@ -278,85 +278,212 @@ export class SmartExtractPreviewModal extends Modal {
 	 * Open inline editor for a specific card
 	 */
 	private openCardEditor(card: SmartCard, cardEl: HTMLElement) {
-		const cardId = card.id;
-		
-		// Create editor container
-		const editorEl = cardEl.createEl('div', { cls: 'card-editor' });
-		
-		// Title editor
-		const titleSection = editorEl.createEl('div', { cls: 'editor-section' });
-		titleSection.createEl('label', { text: 'Title:' });
-		const titleInput = titleSection.createEl('input', { 
+	const cardId = card.id;
+	
+	// Get existing modifications or use original card data
+	const existingModifications = this.approval.modifications[cardId];
+	const currentTitle = existingModifications?.title || card.title;
+	const currentDescription = existingModifications?.description || card.description || '';
+	const currentContext = existingModifications?.context || card.aiAnalysis?.context || '';
+	const currentNextSteps = existingModifications?.nextSteps || card.aiAnalysis?.nextSteps || [];
+	
+	// Find the AI analysis section or create it if it doesn't exist
+	let analysisEl = cardEl.querySelector('.ai-analysis') as HTMLElement;
+	if (!analysisEl) {
+		analysisEl = cardEl.createEl('div', { cls: 'ai-analysis' });
+	}
+	
+	// Store original content to restore on cancel
+	const originalContent = analysisEl.innerHTML;
+	
+	// Clear the analysis section for editing mode
+	analysisEl.innerHTML = '';
+	analysisEl.addClass('editing-mode');
+	
+	// Context editor section
+	if (currentContext || card.aiAnalysis?.context) {
+		const contextEl = analysisEl.createEl('div', { cls: 'ai-context editable-section' });
+		contextEl.createEl('strong', { text: 'Context: ' });
+		const contextTextarea = contextEl.createEl('textarea', {
+			cls: 'inline-editor',
+			value: currentContext
+		});
+		contextTextarea.rows = 3;
+		contextTextarea.placeholder = 'Describe the context of this task...';
+		// Auto-resize textarea based on content
+		contextTextarea.style.height = 'auto';
+		contextTextarea.style.height = contextTextarea.scrollHeight + 'px';
+		contextTextarea.addEventListener('input', () => {
+			contextTextarea.style.height = 'auto';
+			contextTextarea.style.height = contextTextarea.scrollHeight + 'px';
+		});
+	}
+	
+	// Description editor section
+	const descEl = analysisEl.createEl('div', { cls: 'ai-description editable-section' });
+	descEl.createEl('strong', { text: 'Description: ' });
+	const descTextarea = descEl.createEl('textarea', {
+		cls: 'inline-editor',
+		value: currentDescription
+	});
+	descTextarea.rows = 5;
+	descTextarea.placeholder = 'Provide a detailed description...';
+	// Auto-resize textarea based on content
+	descTextarea.style.height = 'auto';
+	descTextarea.style.height = descTextarea.scrollHeight + 'px';
+	descTextarea.addEventListener('input', () => {
+		descTextarea.style.height = 'auto';
+		descTextarea.style.height = descTextarea.scrollHeight + 'px';
+	});
+	
+	// Next Steps editor section  
+	const stepsEl = analysisEl.createEl('div', { cls: 'ai-next-steps editable-section' });
+	stepsEl.createEl('strong', { text: 'Suggested Next Steps:' });
+	const stepsContainer = stepsEl.createEl('div', { cls: 'steps-editor-container' });
+	
+	// Create editable list items for each step
+	const stepInputs: HTMLInputElement[] = [];
+	currentNextSteps.forEach((step, index) => {
+		const stepItem = stepsContainer.createEl('div', { cls: 'step-item' });
+		const bullet = stepItem.createEl('span', { text: '• ', cls: 'step-bullet' });
+		const stepInput = stepItem.createEl('input', {
 			type: 'text',
-			value: card.title,
-			cls: 'editor-input'
+			value: step,
+			cls: 'step-input',
+			placeholder: 'Enter a next step...'
 		});
-
-		// Description editor
-		const descSection = editorEl.createEl('div', { cls: 'editor-section' });
-		descSection.createEl('label', { text: 'Description:' });
-		const descTextarea = descSection.createEl('textarea', {
-			value: card.description,
-			cls: 'editor-textarea'
-		});
-		descTextarea.rows = 3;
-
-		// Next steps editor
-		const stepsSection = editorEl.createEl('div', { cls: 'editor-section' });
-		stepsSection.createEl('label', { text: 'Next Steps (one per line):' });
-		const stepsTextarea = stepsSection.createEl('textarea', {
-			value: card.aiAnalysis?.nextSteps.join('\n') || '',
-			cls: 'editor-textarea'
-		});
-		stepsTextarea.rows = 4;
-
-		// Editor buttons
-		const editorButtons = editorEl.createEl('div', { cls: 'editor-buttons' });
+		stepInputs.push(stepInput);
 		
-		const cancelBtn = editorButtons.createEl('button', { 
-			text: 'Cancel',
-			cls: 'editor-btn-cancel'
+		// Add remove button for each step
+		const removeBtn = stepItem.createEl('button', {
+			text: '✕',
+			cls: 'remove-step-btn',
+			title: 'Remove this step'
 		});
-		cancelBtn.onclick = () => {
-			editorEl.remove();
+		removeBtn.onclick = () => {
+			stepItem.remove();
+			const idx = stepInputs.indexOf(stepInput);
+			if (idx > -1) stepInputs.splice(idx, 1);
 		};
-
-		const saveBtn = editorButtons.createEl('button', { 
-			text: 'Save Changes',
-			cls: 'editor-btn-save'
+	});
+	
+	// Add button to add new steps
+	const addStepBtn = stepsContainer.createEl('button', {
+		text: '+ Add Step',
+		cls: 'add-step-btn'
+	});
+	addStepBtn.onclick = () => {
+		const stepItem = document.createElement('div');
+		stepItem.className = 'step-item';
+		const bullet = stepItem.createEl('span', { text: '• ', cls: 'step-bullet' });
+		const stepInput = stepItem.createEl('input', {
+			type: 'text',
+			value: '',
+			cls: 'step-input',
+			placeholder: 'Enter a next step...'
 		});
-		saveBtn.onclick = () => {
-			// Save modifications
-			this.approval.modifications[cardId] = {
-				title: titleInput.value.trim(),
-				description: descTextarea.value.trim(),
-				nextSteps: stepsTextarea.value.trim().split('\n').filter(s => s.trim())
-			};
-
-			// Update the card preview display
-			this.updateCardDisplay(card, cardEl, this.approval.modifications[cardId]);
-			
-			// Remove editor
-			editorEl.remove();
-			
-			new Notice('✅ Card changes saved');
+		stepInputs.push(stepInput);
+		
+		const removeBtn = stepItem.createEl('button', {
+			text: '✕',
+			cls: 'remove-step-btn',
+			title: 'Remove this step'
+		});
+		removeBtn.onclick = () => {
+			stepItem.remove();
+			const idx = stepInputs.indexOf(stepInput);
+			if (idx > -1) stepInputs.splice(idx, 1);
 		};
-
-		// Hide the card preview content while editing
-		const cardContent = cardEl.querySelector('.ai-analysis') as HTMLElement;
-		if (cardContent) {
-			cardContent.style.display = 'none';
+		
+		stepsContainer.insertBefore(stepItem, addStepBtn);
+		stepInput.focus();
+	};
+	
+	// Update the edit button to show it's in edit mode
+	const editBtn = cardEl.querySelector('.card-edit-btn') as HTMLButtonElement;
+	if (editBtn) {
+		editBtn.style.display = 'none';
+	}
+	
+	// Add save/cancel buttons at the bottom
+	const editorButtons = analysisEl.createEl('div', { cls: 'editor-buttons' });
+	
+	const cancelBtn = editorButtons.createEl('button', { 
+		text: 'Cancel',
+		cls: 'editor-btn-cancel'
+	});
+	cancelBtn.onclick = () => {
+		// Restore original content
+		analysisEl.innerHTML = originalContent;
+		analysisEl.removeClass('editing-mode');
+		if (editBtn) editBtn.style.display = '';
+	};
+	
+	const saveBtn = editorButtons.createEl('button', { 
+		text: 'Save Changes',
+		cls: 'editor-btn-save mod-cta'
+	});
+	saveBtn.onclick = () => {
+		// Get context value if it exists
+		const contextTextarea = analysisEl.querySelector('.ai-context textarea') as HTMLTextAreaElement;
+		const contextValue = contextTextarea?.value.trim();
+		
+		// Save modifications
+		const modifications = {
+			title: currentTitle, // Keep the existing title
+			description: descTextarea.value.trim(),
+			context: contextValue,
+			nextSteps: stepInputs
+				.map(input => input.value.trim())
+				.filter(s => s.length > 0)
+		};
+		this.approval.modifications[cardId] = modifications;
+		
+		// Rebuild the display with the new values
+		analysisEl.innerHTML = '';
+		analysisEl.removeClass('editing-mode');
+		
+		// Recreate the display with updated values
+		if (contextValue) {
+			const contextEl = analysisEl.createEl('div', { cls: 'ai-context' });
+			contextEl.createEl('strong', { text: 'Context: ' });
+			contextEl.createSpan({ text: contextValue });
 		}
 		
-		// Restore content when editor is removed
-		const originalRemove = editorEl.remove;
-		editorEl.remove = function() {
-			if (cardContent) {
-				cardContent.style.display = 'block';
+		if (modifications.description) {
+			const descEl = analysisEl.createEl('div', { cls: 'ai-description' });
+			descEl.createEl('strong', { text: 'Description: ' });
+			descEl.createSpan({ text: modifications.description });
+		}
+		
+		if (modifications.nextSteps && modifications.nextSteps.length > 0) {
+			const stepsEl = analysisEl.createEl('div', { cls: 'ai-next-steps' });
+			stepsEl.createEl('strong', { text: 'Suggested Next Steps:' });
+			const stepsList = stepsEl.createEl('ul');
+			for (const step of modifications.nextSteps) {
+				stepsList.createEl('li', { text: step });
 			}
-			originalRemove.call(editorEl);
-		};
-	}
+		}
+		
+		// Add modified indicator if not already present
+		let modifiedIndicator = cardEl.querySelector('.modified-indicator') as HTMLElement;
+		if (!modifiedIndicator) {
+			const headerEl = cardEl.querySelector('.card-header');
+			if (headerEl) {
+				modifiedIndicator = headerEl.createEl('span', { 
+					cls: 'modified-indicator',
+					text: '✏️ Modified',
+					title: 'This card has been edited'
+				});
+			}
+		}
+		
+		// Show edit button again
+		if (editBtn) editBtn.style.display = '';
+		
+		new Notice('✅ Card changes saved');
+	};
+}
 
 	/**
 	 * Update card display with modifications

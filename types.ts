@@ -84,6 +84,7 @@ export interface PluginSettings {
 	taskSourcePath?: string;
 	autoExtractOnStartup?: boolean;
 	extractedTaskPrefix?: string;
+	smartExtractPrefix?: string;
 	removeExtractedTasks?: boolean;
 	tagMappingOverrides?: Record<string, string>;
 	defaultExtractionBoard?: string;
@@ -124,6 +125,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	taskSourcePath: '',
 	autoExtractOnStartup: false,
 	extractedTaskPrefix: '📥 ',
+	smartExtractPrefix: '🤖 ',
 	removeExtractedTasks: false,
 	tagMappingOverrides: {},
 	defaultExtractionBoard: 'Inbox',
