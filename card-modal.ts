@@ -488,108 +488,152 @@ export class CardModal extends Modal {
 	}
 
 	private updateUrlsDisplay(container: HTMLElement): void {
-		container.empty();
+	container.empty();
+	
+	if (this.cardResearchUrls.length === 0) {
+		container.createEl('div', { 
+			text: 'No research URLs added yet',
+			cls: 'crystal-empty-state'
+		});
+		return;
+	}
+
+	this.cardResearchUrls.forEach((url, index) => {
+		const urlEl = container.createEl('div', { cls: 'crystal-url-item' });
 		
-		if (this.cardResearchUrls.length === 0) {
-			container.createEl('div', { 
-				text: 'No research URLs added yet',
-				cls: 'crystal-empty-state'
+		// URL input with favicon
+		const urlRow = urlEl.createEl('div', { cls: 'crystal-url-row' });
+		
+		// Add favicon
+		const favicon = urlRow.createEl('img', {
+			cls: 'crystal-url-favicon',
+			attr: {
+				src: this.getFaviconUrl(url.url),
+				alt: 'Site icon',
+				width: '16',
+				height: '16'
+			}
+		});
+		
+		// Fallback for broken favicon images
+		favicon.onerror = () => {
+			favicon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNyIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS41IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUgOEgxMU04IDVWMTEiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+'; // Default globe icon
+		};
+		
+		const urlInput = urlRow.createEl('input', {
+			type: 'url',
+			cls: 'crystal-url-input',
+			value: url.url,
+			placeholder: 'https://...'
+		});
+		urlInput.onchange = async () => {
+			const newUrl = urlInput.value.trim();
+			this.cardResearchUrls[index].url = newUrl;
+			
+			// Update favicon when URL changes
+			favicon.src = this.getFaviconUrl(newUrl);
+			
+			// Auto-enhance URL if it looks like a valid URL and title is empty
+			if (newUrl && this.isValidUrl(newUrl) && !this.cardResearchUrls[index].title.trim()) {
+				try {
+					// Show loading state
+					titleInput.value = '⏳ Loading title...';
+					titleInput.disabled = true;
+					
+					// Enhance the URL
+					const metadata = await this.linkManager.enhanceUrl(newUrl);
+					
+					// Update title with enhanced data
+					this.cardResearchUrls[index].title = metadata.title;
+					
+					// If we have AI-generated summary, use it as a compact description
+					if (metadata.description) {
+						// Truncate to make it compact (max 100 chars)
+						const compactSummary = metadata.description.length > 100 
+							? metadata.description.substring(0, 97) + '...'
+							: metadata.description;
+						this.cardResearchUrls[index].description = compactSummary;
+						descTextarea.value = compactSummary;
+						descTextarea.placeholder = 'AI Summary: ' + compactSummary;
+					}
+					
+					// Update UI
+					titleInput.value = metadata.title;
+					titleInput.disabled = false;
+					
+					// Add category indicator
+					this.addCategoryIndicator(urlEl, metadata);
+					
+				} catch (error) {
+					console.warn('Failed to enhance URL:', error);
+					titleInput.value = '';
+					titleInput.disabled = false;
+				}
+			}
+		};
+		
+		const titleInput = urlEl.createEl('input', {
+			type: 'text',
+			cls: 'crystal-url-title',
+			value: url.title,
+			placeholder: 'Link title...'
+		});
+		titleInput.onchange = () => {
+			this.cardResearchUrls[index].title = titleInput.value;
+		};
+		
+		// Changed to textarea for bigger field and renamed label
+		const descContainer = urlEl.createEl('div', { cls: 'crystal-url-desc-container' });
+		const descLabel = descContainer.createEl('label', { 
+			cls: 'crystal-url-desc-label',
+			text: 'Optional description'
+		});
+		
+		const descTextarea = descContainer.createEl('textarea', {
+			cls: 'crystal-url-description-area',
+			value: url.description || '',
+			placeholder: 'Add notes about this URL or let AI generate a summary...'
+		});
+		descTextarea.rows = 2;
+		descTextarea.onchange = () => {
+			this.cardResearchUrls[index].description = descTextarea.value;
+		};
+		
+		// Auto-resize textarea based on content
+		descTextarea.addEventListener('input', () => {
+			descTextarea.style.height = 'auto';
+			descTextarea.style.height = descTextarea.scrollHeight + 'px';
+		});
+		
+		const actionsEl = urlEl.createEl('div', { cls: 'crystal-url-actions' });
+		
+		if (url.url) {
+			const openBtn = actionsEl.createEl('button', {
+				text: '🔗',
+				cls: 'crystal-url-open',
+				attr: { 'aria-label': 'Open URL' }
 			});
-			return;
+			openBtn.onclick = () => {
+				window.open(url.url, '_blank');
+			};
+			
+			// Add hover preview
+			this.linkPreviewManager.addHoverPreview(openBtn, url.url);
 		}
 
-		this.cardResearchUrls.forEach((url, index) => {
-			const urlEl = container.createEl('div', { cls: 'crystal-url-item' });
-			
-			const titleInput = urlEl.createEl('input', {
-				type: 'text',
-				cls: 'crystal-url-title',
-				value: url.title,
-				placeholder: 'Link title...'
-			});
-			titleInput.onchange = () => {
-				this.cardResearchUrls[index].title = titleInput.value;
-			};
-			
-			const urlInput = urlEl.createEl('input', {
-				type: 'url',
-				cls: 'crystal-url-input',
-				value: url.url,
-				placeholder: 'https://...'
-			});
-			urlInput.onchange = async () => {
-				const newUrl = urlInput.value.trim();
-				this.cardResearchUrls[index].url = newUrl;
-				
-				// Auto-enhance URL if it looks like a valid URL and title is empty
-				if (newUrl && this.isValidUrl(newUrl) && !this.cardResearchUrls[index].title.trim()) {
-					try {
-						// Show loading state
-						titleInput.value = '⏳ Loading title...';
-						titleInput.disabled = true;
-						
-						// Enhance the URL
-						const metadata = await this.linkManager.enhanceUrl(newUrl);
-						
-						// Update title and description with enhanced data
-						this.cardResearchUrls[index].title = metadata.title;
-						this.cardResearchUrls[index].description = metadata.description;
-						
-						// Update UI
-						titleInput.value = metadata.title;
-						descInput.value = metadata.description;
-						titleInput.disabled = false;
-						
-						// Add category indicator
-						this.addCategoryIndicator(urlEl, metadata);
-						
-					} catch (error) {
-						console.warn('Failed to enhance URL:', error);
-						titleInput.value = '';
-						titleInput.disabled = false;
-					}
-				}
-			};
-			
-			const descInput = urlEl.createEl('input', {
-				type: 'text',
-				cls: 'crystal-url-description',
-				value: url.description || '',
-				placeholder: 'Optional description...'
-			});
-			descInput.onchange = () => {
-				this.cardResearchUrls[index].description = descInput.value;
-			};
-			
-			const actionsEl = urlEl.createEl('div', { cls: 'crystal-url-actions' });
-			
-			if (url.url) {
-				const openBtn = actionsEl.createEl('button', {
-					text: '🔗',
-					cls: 'crystal-url-open',
-					attr: { 'aria-label': 'Open URL' }
-				});
-				openBtn.onclick = () => {
-					window.open(url.url, '_blank');
-				};
-				
-				// Add hover preview
-				this.linkPreviewManager.addHoverPreview(openBtn, url.url);
-			}
-
-			// Add link status controls
-			this.addLinkStatusControls(urlEl, url, index);
-			
-			const removeBtn = actionsEl.createEl('button', {
-				text: '×',
-				cls: 'crystal-url-remove'
-			});
-			removeBtn.onclick = () => {
-				this.cardResearchUrls.splice(index, 1);
-				this.updateUrlsDisplay(container);
-			};
+		// Add link status controls
+		this.addLinkStatusControls(urlEl, url, index);
+		
+		const removeBtn = actionsEl.createEl('button', {
+			text: '×',
+			cls: 'crystal-url-remove'
 		});
-	}
+		removeBtn.onclick = () => {
+			this.cardResearchUrls.splice(index, 1);
+			this.updateUrlsDisplay(container);
+		};
+	});
+}
 
 	private saveCard(): void {
 		if (!this.cardTitle.trim()) {
@@ -625,6 +669,32 @@ export class CardModal extends Modal {
 			return url.startsWith('http://') || url.startsWith('https://');
 		} catch {
 			return false;
+		}
+	}
+
+	/**
+	 * Get favicon URL for a given website URL
+	 */
+	private getFaviconUrl(url: string): string {
+		if (!url || !this.isValidUrl(url)) {
+			// Return a default globe icon as base64 SVG
+			return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNyIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS41IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUgOEgxMU04IDVWMTEiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+';
+		}
+		
+		try {
+			const urlObj = new URL(url);
+			const domain = urlObj.hostname;
+			
+			// Use Google's favicon service as primary option (reliable and fast)
+			return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+			
+			// Alternative services (in case you want to switch):
+			// return `https://favicons.githubusercontent.com/${domain}`;
+			// return `https://icon.horse/icon/${domain}`;
+			// return `${urlObj.protocol}//${domain}/favicon.ico`;
+		} catch {
+			// Return default icon if URL parsing fails
+			return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNyIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS41IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUgOEgxMU04IDVWMTEiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+';
 		}
 	}
 
