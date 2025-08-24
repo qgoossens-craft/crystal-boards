@@ -1,9 +1,11 @@
 import { ItemView, WorkspaceLeaf, Modal, Setting, TFile, App } from 'obsidian';
 import CrystalBoardsPlugin from './main';
-import { Board, DASHBOARD_VIEW_TYPE } from './types';
+import { Board, DASHBOARD_VIEW_TYPE, getThemeAwareColors } from './types';
 
 export class DashboardView extends ItemView {
 	plugin: CrystalBoardsPlugin;
+	private themeChangeHandler: (() => void) | null = null;
+	private themeObserver: MutationObserver | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: CrystalBoardsPlugin) {
 		super(leaf);
@@ -24,6 +26,7 @@ export class DashboardView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		await this.renderDashboard();
+		this.setupThemeChangeListener();
 	}
 
 	async onShow(): Promise<void> {
@@ -32,7 +35,58 @@ export class DashboardView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
-		// Clean up if needed
+		// Clean up theme listeners
+		if (this.themeObserver) {
+			this.themeObserver.disconnect();
+			this.themeObserver = null;
+		}
+		
+		if (this.themeChangeHandler) {
+			const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+			if (mediaQuery.removeEventListener) {
+				mediaQuery.removeEventListener('change', this.themeChangeHandler);
+			}
+			this.themeChangeHandler = null;
+		}
+	}
+
+	/**
+	 * Setup theme change listener to refresh dashboard when theme changes
+	 */
+	private setupThemeChangeListener(): void {
+		// Listen for theme changes
+		if (!this.themeChangeHandler) {
+			this.themeChangeHandler = () => {
+				console.log('🎨 Dashboard theme change detected - refreshing');
+				// Refresh the entire dashboard to update any theme-dependent elements
+				this.renderDashboard();
+			};
+		}
+
+		// Listen for theme changes via body class changes
+		if (!this.themeObserver) {
+			this.themeObserver = new MutationObserver((mutations) => {
+				mutations.forEach((mutation) => {
+					if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+						const target = mutation.target as HTMLElement;
+						if (target === document.body && this.themeChangeHandler) {
+							this.themeChangeHandler();
+						}
+					}
+				});
+			});
+
+			this.themeObserver.observe(document.body, {
+				attributes: true,
+				attributeFilter: ['class']
+			});
+		}
+
+		// Also listen for system theme changes
+		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+		if (mediaQuery.addEventListener) {
+			mediaQuery.addEventListener('change', this.themeChangeHandler);
+		}
 	}
 
 	async renderDashboard(): Promise<void> {
@@ -773,29 +827,32 @@ class CreateBoardModal extends Modal {
 			emoji: this.emoji || undefined,
 			coverImage: this.coverImage || undefined,
 			position: 0, // Will be set properly in the callback
-			columns: [
-				{
-					id: this.generateId(),
-					name: 'To Do',
-					color: '#e3f2fd',
-					position: 0,
-					cards: []
-				},
-				{
-					id: this.generateId(),
-					name: 'In Progress',
-					color: '#fff3e0',
-					position: 1,
-					cards: []
-				},
-				{
-					id: this.generateId(),
-					name: 'Done',
-					color: '#e8f5e8',
-					position: 2,
-					cards: []
-				}
-			],
+			columns: (() => {
+					const colors = getThemeAwareColors();
+					return [
+						{
+							id: this.generateId(),
+							name: 'To Do',
+							color: colors[0],
+							position: 0,
+							cards: []
+						},
+						{
+							id: this.generateId(),
+							name: 'In Progress',
+							color: colors[1],
+							position: 1,
+							cards: []
+						},
+						{
+							id: this.generateId(),
+							name: 'Done',
+							color: colors[2],
+							position: 2,
+							cards: []
+						}
+					];
+				})(),
 			created: now,
 			modified: now
 		};

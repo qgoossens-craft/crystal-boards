@@ -90,9 +90,22 @@ export interface PluginSettings {
 	extractionColumnName?: string;
 }
 
+// Theme-aware color palettes
+// Universal colors that work beautifully on BOTH light and dark backgrounds
+export const UNIVERSAL_COLORS = ['#F0D0D0', '#D0F0D5', '#D0E5F0', '#F0F0D0', '#E5D0F0'];
+export const LIGHT_THEME_COLORS = UNIVERSAL_COLORS;
+export const DARK_THEME_COLORS = UNIVERSAL_COLORS;
+/**
+ * Get theme-appropriate column colors based on current Obsidian theme
+ */
+export function getThemeAwareColors(): string[] {
+	// Return universal colors that work beautifully on both light and dark backgrounds
+	return UNIVERSAL_COLORS;
+}
+
 export const DEFAULT_SETTINGS: PluginSettings = {
 	kanbanFolderPath: 'Kanban',
-	defaultColumnColors: ['#e3f2fd', '#f3e5f5', '#e8f5e8', '#fff3e0', '#ffebee'],
+	defaultColumnColors: LIGHT_THEME_COLORS,
 	showCoverImages: true,
 	boardsPerRow: 3,
 	customPluginName: 'Crystal Boards',
