@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Modal, Setting, TFile, App } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Modal, Setting, TFile, App, Notice } from 'obsidian';
 import CrystalBoardsPlugin from './main';
 import { Board, DASHBOARD_VIEW_TYPE, getThemeAwareColors } from './types';
 
@@ -287,25 +287,52 @@ export class DashboardView extends ItemView {
 		
 		// Extract Tasks button
 		const extractBtn = footerEl.createEl('button', {
-			cls: 'crystal-extract-tasks-btn',
-			text: '📥 Extract Tasks'
+			cls: this.plugin.settings.useSmartExtract ? 'crystal-smart-extract-btn' : 'crystal-extract-tasks-btn',
+			text: this.plugin.settings.useSmartExtract ? '🤖 Smart Extract' : '📥 Extract Tasks'
 		});
 
 		// Add tooltip/description
-		extractBtn.title = `Extract tasks from ${this.plugin.settings.taskSourcePath}`;
+		if (this.plugin.settings.useSmartExtract) {
+			extractBtn.title = `AI-powered extraction from ${this.plugin.settings.taskSourcePath}
+Analyzes context and generates descriptions`;
+		} else {
+			extractBtn.title = `Extract tasks from ${this.plugin.settings.taskSourcePath}`;
+		}
 		
 		// Button click handler
 		extractBtn.onclick = async () => {
+			const isSmartExtract = this.plugin.settings.useSmartExtract;
 			extractBtn.disabled = true;
-			extractBtn.setText('⏳ Extracting...');
+			extractBtn.setText(isSmartExtract ? '🧠 Analyzing...' : '⏳ Extracting...');
 			
 			try {
-				await this.plugin.taskExtractionService.quickExtract();
-				// Refresh dashboard to show new cards
-				await this.renderDashboard();
+				if (isSmartExtract) {
+					// Check if Smart Extract is properly configured
+					if (!this.plugin.settings.openAIApiKey) {
+						new Notice('Please configure your OpenAI API key in settings first');
+						return;
+					}
+					
+					// The new performSmartExtraction method now shows preview first and handles everything
+					const result = await this.plugin.smartExtractionService.performSmartExtraction();
+					
+					// Only show success/failure messages if the extraction actually happened
+					if (result.success) {
+						new Notice(`✅ Smart extracted ${result.tasksAnalyzed} tasks with AI analysis`);
+						// Refresh dashboard to show new cards
+						await this.renderDashboard();
+					} else if (result.errors.length > 0 && !result.errors.includes('Smart extraction cancelled by user')) {
+						new Notice(`❌ Smart extraction failed: ${result.errors.join(', ')}`);
+					}
+					// If cancelled by user, don't show error message
+				} else {
+					await this.plugin.taskExtractionService.quickExtract();
+					// Refresh dashboard to show new cards
+					await this.renderDashboard();
+				}
 			} catch (error) {
 				console.error('Task extraction failed:', error);
-				// Button will be re-enabled when dashboard re-renders
+				new Notice(`❌ ${isSmartExtract ? 'Smart' : 'Task'} extraction failed: ${error.message}`);
 			}
 		};
 

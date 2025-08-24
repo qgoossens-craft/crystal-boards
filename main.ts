@@ -1,8 +1,9 @@
-import { Plugin } from 'obsidian';
+import { Plugin, Notice } from 'obsidian';
 import { DashboardView } from './dashboard-view';
 import { BoardView } from './board-view';
 import { DataManager } from './data-manager';
 import { TaskExtractionService } from './task-extraction-service';
+import { SmartExtractionService } from './smart-extraction-service';
 import { PluginSettings, DASHBOARD_VIEW_TYPE, BOARD_VIEW_TYPE, Board } from './types';
 import { CrystalBoardsSettingTab } from './settings-tab';
 
@@ -10,6 +11,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 	settings: PluginSettings;
 	dataManager: DataManager;
 	taskExtractionService: TaskExtractionService;
+	smartExtractionService: SmartExtractionService;
 
 	async onload() {
 		console.log('Loading Crystal Boards plugin');
@@ -22,6 +24,9 @@ export default class CrystalBoardsPlugin extends Plugin {
 
 		// Initialize task extraction service
 		this.taskExtractionService = new TaskExtractionService(this.app, this);
+		
+		// Initialize smart extraction service
+		this.smartExtractionService = new SmartExtractionService(this);
 
 		// Register views
 		this.registerView(
@@ -61,7 +66,23 @@ export default class CrystalBoardsPlugin extends Plugin {
 			id: 'extract-tasks',
 			name: 'Extract Tasks from Source Note',
 			callback: async () => {
-				await this.taskExtractionService.quickExtract();
+				if (this.settings.useSmartExtract) {
+					await this.smartExtractionService.performSmartExtraction();
+				} else {
+					await this.taskExtractionService.quickExtract();
+				}
+			}
+		});
+
+		this.addCommand({
+			id: 'smart-extract-tasks',
+			name: 'Smart Extract Tasks with AI',
+			callback: async () => {
+				if (!this.settings.useSmartExtract) {
+					new Notice('Smart Extract is disabled. Enable it in settings first.');
+					return;
+				}
+				await this.smartExtractionService.performSmartExtraction();
 			}
 		});
 
@@ -135,6 +156,12 @@ export default class CrystalBoardsPlugin extends Plugin {
 		const oldSettings = { ...this.settings };
 		await this.dataManager.updateSettings(newSettings);
 		this.settings = this.dataManager.getSettings();
+		
+		// Update Smart Extract configuration if related settings changed
+		if (newSettings.openAIApiKey !== undefined || newSettings.openAIModel !== undefined || 
+			newSettings.smartExtractMaxTokens !== undefined || newSettings.smartExtractTemperature !== undefined) {
+			this.smartExtractionService?.updateConfiguration();
+		}
 		
 		// Refresh dashboard if boardsPerRow or showCoverImages changed
 		if (newSettings.boardsPerRow !== undefined && newSettings.boardsPerRow !== oldSettings.boardsPerRow ||

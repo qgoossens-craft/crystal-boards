@@ -1,5 +1,6 @@
 import { Plugin } from 'obsidian';
 import { KanbanData, Board, Column, Card, PluginSettings, DEFAULT_SETTINGS } from './types';
+import { SecureStorage } from './security-utils';
 
 export class DataManager {
 	private plugin: Plugin;
@@ -57,9 +58,17 @@ export class DataManager {
 			// Sort boards by position
 			migratedBoards.sort((a: Board, b: Board) => a.position - b.position);
 
+			// Handle settings with secure API key
+			const settings = { ...DEFAULT_SETTINGS, ...savedData.settings };
+			
+			// De-obfuscate API key if it exists
+			if (settings.openAIApiKey) {
+				settings.openAIApiKey = SecureStorage.deobfuscate(settings.openAIApiKey);
+			}
+
 			this.data = {
 				boards: migratedBoards,
-				settings: { ...DEFAULT_SETTINGS, ...savedData.settings }
+				settings: settings
 			};
 		}
 	}
@@ -169,11 +178,28 @@ export class DataManager {
 	}
 
 	getSettings(): PluginSettings {
-		return this.data.settings;
+		// Return settings with de-obfuscated API key
+		const settings = { ...this.data.settings };
+		if (settings.openAIApiKey) {
+			settings.openAIApiKey = SecureStorage.deobfuscate(settings.openAIApiKey);
+		}
+		return settings;
 	}
 
 	async updateSettings(newSettings: Partial<PluginSettings>): Promise<void> {
-		this.data.settings = { ...this.data.settings, ...newSettings };
+		// Handle API key obfuscation
+		const settingsToSave = { ...newSettings };
+		
+		if (settingsToSave.openAIApiKey) {
+			// Validate API key format
+			if (!SecureStorage.validateOpenAIKey(settingsToSave.openAIApiKey)) {
+				throw new Error('Invalid OpenAI API key format');
+			}
+			// Obfuscate before saving
+			settingsToSave.openAIApiKey = SecureStorage.obfuscate(settingsToSave.openAIApiKey);
+		}
+		
+		this.data.settings = { ...this.data.settings, ...settingsToSave };
 		await this.saveData();
 	}
 

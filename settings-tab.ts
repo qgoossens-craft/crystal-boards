@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import CrystalBoardsPlugin from './main';
 
 export class CrystalBoardsSettingTab extends PluginSettingTab {
@@ -130,7 +130,187 @@ export class CrystalBoardsSettingTab extends PluginSettingTab {
 					await this.plugin.updateSettings({ extractionColumnName: value });
 				}));
 
-		// Data management section
+		// Smart Extract with AI section
+	containerEl.createEl('h3', { text: 'Smart Extract (AI-Powered)' });
+	containerEl.createEl('p', { 
+		text: 'Use AI to automatically analyze tasks and generate descriptions and next steps.',
+		cls: 'setting-item-description'
+	});
+
+	new Setting(containerEl)
+		.setName('Enable Smart Extract')
+		.setDesc('Use AI-powered extraction instead of standard extraction')
+		.addToggle(toggle => toggle
+			.setValue(this.plugin.settings.useSmartExtract || false)
+			.onChange(async (value) => {
+				await this.plugin.updateSettings({ useSmartExtract: value });
+				// Show/hide related settings
+				this.display();
+			}));
+
+	if (this.plugin.settings.useSmartExtract) {
+		new Setting(containerEl)
+			.setName('OpenAI API Key')
+			.setDesc('Your OpenAI API key (stored securely)')
+			.addText(text => {
+				text.inputEl.type = 'password';
+				text.setPlaceholder('sk-...')
+					.setValue(this.plugin.settings.openAIApiKey || '')
+					.onChange(async (value) => {
+						await this.plugin.updateSettings({ openAIApiKey: value });
+					});
+				
+				// Add show/hide button
+				const eyeButton = text.inputEl.parentElement?.createEl('button', {
+					cls: 'clickable-icon',
+					attr: { 'aria-label': 'Show API key' }
+				});
+				if (eyeButton) {
+					eyeButton.innerHTML = '👁️';
+					eyeButton.onclick = () => {
+						text.inputEl.type = text.inputEl.type === 'password' ? 'text' : 'password';
+						eyeButton.innerHTML = text.inputEl.type === 'password' ? '👁️' : '🙈';
+					};
+				}
+			})
+			.addButton(button => button
+				.setButtonText('Test Connection')
+				.onClick(async () => {
+					if (!this.plugin.settings.openAIApiKey) {
+						new Notice('Please enter an API key first');
+						return;
+					}
+					
+					button.setButtonText('Testing...');
+					button.setDisabled(true);
+					
+					try {
+						// Test the API connection
+						const { OpenAIService } = await import('./openai-service');
+						const service = new OpenAIService({
+							apiKey: this.plugin.settings.openAIApiKey,
+							model: this.plugin.settings.openAIModel || 'gpt-3.5-turbo',
+							maxTokens: 100,
+							temperature: 0.7
+						});
+						
+						const success = await service.testConnection();
+						if (success) {
+							new Notice('✅ OpenAI connection successful!');
+						} else {
+							new Notice('❌ Connection failed. Please check your API key.');
+						}
+					} catch (error) {
+						new Notice(`❌ Error: ${error.message}`);
+					} finally {
+						button.setButtonText('Test Connection');
+						button.setDisabled(false);
+					}
+				}));
+
+		new Setting(containerEl)
+			.setName('AI Model')
+			.setDesc('Choose the OpenAI model to use')
+			.addDropdown(dropdown => dropdown
+				.addOption('gpt-4.1-mini', 'GPT-4.1 Mini (Recommended - Fast & Smart)')
+				.addOption('gpt-4.1', 'GPT-4.1 (Smartest non-reasoning model)')
+				.addOption('gpt-4.1-nano', 'GPT-4.1 Nano (Fastest, most cost-efficient)')
+				.addOption('gpt-5-mini', 'GPT-5 Mini (Fast, cost-efficient version of GPT-5)')
+				.addOption('gpt-5', 'GPT-5 (Best for coding and agentic tasks)')
+				.addOption('gpt-5-nano', 'GPT-5 Nano (Fastest, most cost-efficient GPT-5)')
+				.addOption('o3-mini', 'o3-mini (Small reasoning model)')
+				.addOption('o3', 'o3 (Reasoning model for complex tasks)')
+				.addOption('gpt-4o', 'GPT-4o (Fast, intelligent, flexible)')
+				.addOption('gpt-4o-mini', 'GPT-4o Mini (Fast, affordable small model)')
+				.addOption('gpt-4-turbo', 'GPT-4 Turbo (High intelligence)')
+				.addOption('gpt-4', 'GPT-4 (Classic high-intelligence)')
+				.addOption('gpt-3.5-turbo', 'GPT-3.5 Turbo (Legacy, cheaper)')
+				.addOption('o1', 'o1 (Previous reasoning model)')
+				.addOption('o1-mini', 'o1-mini (Small reasoning alternative)')
+				.setValue(this.plugin.settings.openAIModel || 'gpt-4.1-mini')
+				.onChange(async (value: any) => {
+					await this.plugin.updateSettings({ openAIModel: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Max Tokens')
+			.setDesc('Maximum tokens for AI responses (affects cost and response length)')
+			.addSlider(slider => slider
+				.setLimits(100, 1000, 50)
+				.setValue(this.plugin.settings.smartExtractMaxTokens || 500)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ smartExtractMaxTokens: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Temperature')
+			.setDesc('AI creativity level (0 = deterministic, 1 = creative)')
+			.addSlider(slider => slider
+				.setLimits(0, 1, 0.1)
+				.setValue(this.plugin.settings.smartExtractTemperature || 0.7)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ smartExtractTemperature: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Confidence Threshold')
+			.setDesc('Minimum confidence level to auto-accept AI suggestions')
+			.addSlider(slider => slider
+				.setLimits(0, 1, 0.05)
+				.setValue(this.plugin.settings.smartExtractConfidenceThreshold || 0.7)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ smartExtractConfidenceThreshold: value });
+				}));
+
+		new Setting(containerEl)
+			.setName('Use Custom Prompt')
+			.setDesc('Use your own prompt instead of the default')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.useCustomPrompt || false)
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ useCustomPrompt: value });
+					this.display();
+				}));
+
+		if (this.plugin.settings.useCustomPrompt) {
+			new Setting(containerEl)
+				.setName('Custom Prompt')
+				.setDesc('Your custom prompt for task analysis (use {task}, {tags}, {url} as placeholders)')
+				.addTextArea(text => text
+					.setPlaceholder('Analyze the task: {task}\nTags: {tags}\n...')
+					.setValue(this.plugin.settings.customPrompt || '')
+					.onChange(async (value) => {
+						await this.plugin.updateSettings({ customPrompt: value });
+					}));
+		}
+
+		new Setting(containerEl)
+			.setName('Cache AI Responses')
+			.setDesc('Cache AI responses to reduce API calls and costs')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.cacheAIResponses !== false)
+				.onChange(async (value) => {
+					await this.plugin.updateSettings({ cacheAIResponses: value });
+				}));
+
+		if (this.plugin.settings.cacheAIResponses !== false) {
+			new Setting(containerEl)
+				.setName('Cache Duration')
+				.setDesc('How long to cache AI responses (in hours)')
+				.addSlider(slider => slider
+					.setLimits(1, 168, 1)
+					.setValue(this.plugin.settings.cacheDurationHours || 24)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						await this.plugin.updateSettings({ cacheDurationHours: value });
+					}));
+		}
+	}
+
+	// Data management section
 		containerEl.createEl('h3', { text: 'Data Management' });
 
 		new Setting(containerEl)

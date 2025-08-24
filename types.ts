@@ -88,6 +88,17 @@ export interface PluginSettings {
 	tagMappingOverrides?: Record<string, string>;
 	defaultExtractionBoard?: string;
 	extractionColumnName?: string;
+	// Smart Extract settings
+	useSmartExtract?: boolean;
+	openAIApiKey?: string;
+	openAIModel?: 'gpt-3.5-turbo' | 'gpt-4' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4.1' | 'gpt-4.1-mini' | 'gpt-4.1-nano' | 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'o3' | 'o3-mini' | 'o1' | 'o1-mini';
+	smartExtractMaxTokens?: number;
+	smartExtractTemperature?: number;
+	useCustomPrompt?: boolean;
+	customPrompt?: string;
+	smartExtractConfidenceThreshold?: number;
+	cacheAIResponses?: boolean;
+	cacheDurationHours?: number;
 }
 
 // Theme-aware color palettes
@@ -116,8 +127,19 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	removeExtractedTasks: false,
 	tagMappingOverrides: {},
 	defaultExtractionBoard: 'Inbox',
-	extractionColumnName: 'To Do'
-};
+	extractionColumnName: 'To Do',
+	// Smart Extract defaults
+	useSmartExtract: false,
+	openAIApiKey: '',
+	openAIModel: 'gpt-4.1-mini',
+	smartExtractMaxTokens: 500,
+	smartExtractTemperature: 0.7,
+	useCustomPrompt: false,
+	customPrompt: '',
+	smartExtractConfidenceThreshold: 0.7,
+	cacheAIResponses: true,
+	cacheDurationHours: 24
+};;
 
 // View types
 export const DASHBOARD_VIEW_TYPE = 'crystal-boards-dashboard';
