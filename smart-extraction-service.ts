@@ -1,7 +1,8 @@
 import { requestUrl } from 'obsidian';
+import { Readability } from '@mozilla/readability';
 import { OpenAIService, TaskAnalysis } from './openai-service';
 import { TaskExtractionService } from './task-extraction-service';
-import { ExtractedTask, ResearchUrl, TodoItem } from './types';
+import { ExtractedTask, ResearchUrl, TodoItem, Board, Card } from './types';
 import CrystalBoardsPlugin from './main';
 
 export interface SmartExtractApproval {
@@ -67,6 +68,31 @@ export class SmartExtractionService {
 			maxTokens: settings.smartExtractMaxTokens || 500,
 			temperature: settings.smartExtractTemperature || 0.7
 		});
+	}
+
+	/**
+	 * Find appropriate board name for a given tag (using same logic as regular task extraction)
+	 */
+	private findBoardNameForTag(tag: string): string {
+		const settings = this.plugin.settings;
+		
+		// Check for custom tag mappings first
+		if (settings.tagMappingOverrides && settings.tagMappingOverrides[tag]) {
+			return settings.tagMappingOverrides[tag];
+		}
+
+		// Try to find existing board with matching name (case-insensitive)
+		const boards = this.plugin.dataManager.getBoards();
+		const matchingBoard = boards.find(board => 
+			board.name.toLowerCase() === tag.toLowerCase()
+		);
+
+		if (matchingBoard) {
+			return matchingBoard.name;
+		}
+
+		// Return the tag as board name (will create new board if needed)
+		return tag;
 	}
 
 	/**
@@ -141,7 +167,7 @@ export class SmartExtractionService {
 						if (modifications.title) smartCard.title = modifications.title;
 						if (modifications.description) smartCard.description = modifications.description;
 						if (modifications.nextSteps) {
-							smartCard.todos = modifications.nextSteps.map(step => ({
+							smartCard.todos = modifications.nextSteps.map((step: string) => ({
 								id: `todo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 								text: step,
 								completed: false,
@@ -150,20 +176,49 @@ export class SmartExtractionService {
 						}
 					}
 
-					// Determine target board
-					const boardName = smartCard.originalTask.board || this.plugin.settings.defaultBoard || 'Tasks';
+					// Determine target board using hashtag-to-board mapping logic
+					let boardName: string;
+					if (smartCard.originalTask.tags.length > 0) {
+						// Use the same logic as regular task extraction - find board for first tag
+						const firstTag = smartCard.originalTask.tags[0];
+						boardName = this.findBoardNameForTag(firstTag);
+					} else {
+						// No tags, use default board
+						boardName = this.plugin.settings.defaultExtractionBoard || 'Tasks';
+					}
 					
-					// Create the card
-					await dataManager.createCard(boardName, smartCard);
+					// Find or create board and add card to first column
+					const boards = dataManager.getBoards();
+					let targetBoard = boards.find((b: Board) => b.name === boardName);
 					
-					// Track board usage
-					if (!result.boardsCreated.includes(boardName) && !result.boardsUpdated.includes(boardName)) {
-						const boards = await dataManager.getAllBoards();
-						if (boards.find(b => b.name === boardName)) {
-							result.boardsUpdated.push(boardName);
-						} else {
-							result.boardsCreated.push(boardName);
-						}
+					if (!targetBoard) {
+						// Create new board if it doesn't exist
+						const newBoard: Board = {
+							id: `board-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+							name: boardName,
+							folderPath: this.plugin.settings.kanbanFolderPath,
+							position: boards.length,
+							columns: [{
+								id: `column-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+								name: this.plugin.settings.extractionColumnName || 'To Do',
+								color: this.plugin.settings.defaultColumnColors[0] || '#3b82f6',
+								position: 0,
+								cards: []
+							}],
+							created: Date.now(),
+							modified: Date.now()
+						};
+						await dataManager.addBoard(newBoard);
+						targetBoard = newBoard;
+						result.boardsCreated.push(boardName);
+					} else {
+						result.boardsUpdated.push(boardName);
+					}
+					
+					// Add card to the first column of the target board
+					const targetColumn = targetBoard.columns[0];
+					if (targetColumn) {
+						await dataManager.addCardToColumn(targetBoard.id, targetColumn.id, smartCard as Card);
 					}
 
 					result.smartCards.push(smartCard);
@@ -183,6 +238,319 @@ export class SmartExtractionService {
 		}
 
 		return result;
+	}
+
+	/**
+	 * Extract clean content using Mozilla Readability
+	 */
+	private async extractWithReadability(url: string, html: string): Promise<{
+		title?: string | null;
+		content?: string | null;
+		textContent?: string | null;
+		excerpt?: string | null;
+		byline?: string | null;
+		siteName?: string | null;
+		publishedTime?: string | null;
+		length?: number | null;
+		lang?: string | null;
+	} | null> {
+		try {
+			console.log(`[DEBUG] extractWithReadability called for: ${url}`);
+			console.log(`[DEBUG] HTML content length: ${html?.length || 0} chars`);
+			
+			// Create browser-compatible document using DOMParser
+			console.log(`[DEBUG] Creating DOMParser and parsing HTML...`);
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, 'text/html');
+			console.log(`[DEBUG] Document parsed, title found: ${doc.title || 'none'}`);
+			
+			// Set the URL for relative link resolution
+			if (doc.head && !doc.querySelector('base')) {
+				const baseElement = doc.createElement('base');
+				baseElement.href = url;
+				doc.head.insertBefore(baseElement, doc.head.firstChild);
+			}
+			
+			// Note: Skipping isProbablyReaderable check due to Electron compatibility issues
+			console.log('Attempting Readability parsing...');
+			
+			// Parse with Readability
+			console.log(`[DEBUG] Creating Readability instance with options...`);
+			const reader = new Readability(doc, {
+				charThreshold: 200, // Lower threshold for shorter articles
+				debug: true, // Enable Readability debug mode
+				keepClasses: false
+			});
+			console.log(`[DEBUG] Readability instance created, calling parse()...`);
+			
+			const article = reader.parse();
+			
+			console.log(`[DEBUG] Parse completed, result:`, {
+				hasArticle: !!article,
+				title: article?.title || 'none',
+				contentLength: article?.content?.length || 0,
+				textContentLength: article?.textContent?.length || 0,
+				excerpt: article?.excerpt?.substring(0, 100) + '...' || 'none'
+			});
+			
+			if (article) {
+				console.log(`[DEBUG] Readability extracted article: ${article.title} (${article.length} chars)`);
+				return {
+					title: article.title || null,
+					content: article.content || null,
+					textContent: article.textContent || null,
+					excerpt: article.excerpt || null,
+					byline: article.byline || null,
+					siteName: article.siteName || null,
+					publishedTime: article.publishedTime || null,
+					length: article.length || null,
+					lang: article.lang || null
+				};
+			}
+			
+			console.log(`[DEBUG] Readability parsing failed - no article extracted`);
+			return null;
+		} catch (error) {
+			console.error('[DEBUG] Mozilla Readability extraction failed:', error);
+			console.error('[DEBUG] Error details:', {
+				message: error.message,
+				stack: error.stack?.substring(0, 500)
+			});
+			return null;
+		}
+	}
+
+	/**
+	 * Try to scrape URL content using specialized scrapers and Mozilla Readability
+	 */
+	private async tryMCPScraping(url: string): Promise<string | null> {
+		console.log(`[DEBUG] Starting tryMCPScraping for URL: ${url}`);
+		console.log(`[DEBUG] URL includes reddit.com: ${url.includes('reddit.com')}`);
+		try {
+			// For Reddit URLs, try the JSON API approach
+			if (url.includes('reddit.com')) {
+				console.log('[DEBUG] Reddit URL detected, attempting JSON API scraping for:', url);
+				console.log(`[DEBUG] URL analysis:`, {
+					isShareUrl: url.includes('/s/'),
+					isDirectPost: url.includes('/comments/'),
+					urlFormat: url.includes('/s/') ? 'share-url' : url.includes('/comments/') ? 'direct-post' : 'other'
+				});
+				
+				// Handle Reddit share URLs by expanding them first
+				let actualUrl = url;
+				if (url.includes('/s/')) {
+					console.log('[DEBUG] Reddit share URL detected, attempting to expand...');
+					try {
+						// First, get the actual post URL by following redirect
+						const expandResponse = await requestUrl({
+							url: url,
+							method: 'GET',
+							headers: {
+								'User-Agent': 'Crystal Boards Smart Extract v1.0'
+							}
+						});
+						
+						// Look for canonical URL in the response
+						if (expandResponse.text) {
+							const canonicalMatch = expandResponse.text.match(/<link[^>]*rel="canonical"[^>]*href="([^"]*)"[^>]*>/i);
+							if (canonicalMatch && canonicalMatch[1]) {
+								actualUrl = canonicalMatch[1];
+								console.log(`[DEBUG] Expanded Reddit URL via canonical: ${actualUrl}`);
+							} else {
+								console.log(`[DEBUG] No canonical URL found, trying alternative methods...`);
+								// Try Reddit's special canonical-url-updater div first
+								const canonicalUpdaterMatch = expandResponse.text.match(/<div[^>]*id="canonical-url-updater"[^>]*value="([^"]*)"/i);
+								if (canonicalUpdaterMatch && canonicalUpdaterMatch[1] && canonicalUpdaterMatch[1] !== url) {
+									actualUrl = canonicalUpdaterMatch[1];
+									console.log(`[DEBUG] Expanded Reddit URL via canonical-url-updater div: ${actualUrl}`);
+								} else {
+									// Try og:url meta tag
+									const ogUrlMatch = expandResponse.text.match(/<meta[^>]*property="og:url"[^>]*content="([^"]*)"/i);
+									if (ogUrlMatch && ogUrlMatch[1] && ogUrlMatch[1] !== url) {
+										actualUrl = ogUrlMatch[1];
+										console.log(`[DEBUG] Expanded Reddit URL via og:url: ${actualUrl}`);
+									} else {
+										console.log(`[DEBUG] No canonical URL found via any method, will proceed with original URL`);
+									}
+								}
+							}
+						}
+					} catch (expandError) {
+						console.log(`[DEBUG] Failed to expand Reddit share URL: ${expandError.message}`);
+					}
+				}
+				
+				// Convert to JSON API URL
+				let jsonUrl = actualUrl;
+				if (!jsonUrl.endsWith('.json')) {
+					jsonUrl = actualUrl.replace(/\/$/, '') + '.json';
+				}
+				console.log(`[DEBUG] Reddit JSON URL: ${jsonUrl}`);
+				
+				try {
+					const jsonResponse = await requestUrl({
+						url: jsonUrl,
+						method: 'GET',
+						headers: {
+							'User-Agent': 'Crystal Boards Smart Extract v1.0'
+						}
+					});
+					
+					if (jsonResponse.status === 200) {
+						const data = jsonResponse.json;
+						console.log('[DEBUG] Reddit JSON API successful, data structure:', typeof data);
+						console.log('Reddit JSON API successful');
+						
+						// Extract post data
+						console.log(`[DEBUG] Checking data structure:`, {
+							hasData: !!data,
+							isArray: Array.isArray(data),
+							firstElement: data?.[0] ? 'present' : 'missing',
+							hasChildren: data?.[0]?.data?.children ? 'present' : 'missing'
+						});
+						
+						if (data && data[0] && data[0].data && data[0].data.children) {
+							const post = data[0].data.children[0].data;
+							console.log(`[DEBUG] Reddit post found:`, {
+								title: post.title?.substring(0, 100),
+								author: post.author,
+								subreddit: post.subreddit,
+								hasContent: !!post.selftext
+							});
+							let content = '';
+							
+							if (post.title) content += `Title: ${post.title}
+
+`;
+							if (post.selftext) content += `Post Content: ${post.selftext}
+
+`;
+							if (post.url && post.url !== url) content += `External Link: ${post.url}
+
+`;
+							if (post.author) content += `Posted by: u/${post.author}
+`;
+							if (post.subreddit) content += `Subreddit: r/${post.subreddit}
+`;
+							if (post.score !== undefined) content += `Score: ${post.score} points
+`;
+							if (post.num_comments) content += `Comments: ${post.num_comments}
+`;
+							
+							// Get top comments if available
+							if (data[1] && data[1].data && data[1].data.children) {
+								const comments = data[1].data.children.slice(0, 5).filter((c: any) => c.data && c.data.body);
+								if (comments.length > 0) {
+									content += '\nTop Comments:\n';
+									comments.forEach((comment: any, index: number) => {
+										if (comment.data.body) {
+											const commentText = comment.data.body.substring(0, 300);
+											content += `${index + 1}. u/${comment.data.author}: ${commentText}${commentText.length >= 300 ? '...' : ''}\n\n`;
+										}
+									});
+								}
+							}
+							
+							if (content.length > 100) {
+								console.log(`[DEBUG] Reddit JSON extracted ${content.length} characters of content`);
+								console.log(`[DEBUG] Content preview:`, content.substring(0, 200) + '...');
+								console.log(`Reddit JSON extracted ${content.length} characters of content`);
+								return content;
+							} else {
+								console.log(`[DEBUG] Reddit content too short (${content.length} chars), falling back`);
+							}
+						}
+					}
+				} catch (jsonError) {
+					console.log(`[DEBUG] Reddit JSON API failed:`, {
+						status: jsonError.status || 'unknown',
+						message: jsonError.message,
+						url: jsonUrl
+					});
+					console.log('Reddit JSON API failed, falling back to HTML scraping:', jsonError.message);
+				}
+			}
+
+			// Step 2: Try Mozilla Readability for all URLs (including Reddit if JSON failed)
+			console.log('Attempting Mozilla Readability extraction for:', url);
+			
+			const response = await requestUrl({
+				url: url,
+				method: 'GET',
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+				}
+			});
+
+			if (response.status !== 200) {
+				throw new Error(`HTTP ${response.status}`);
+			}
+
+			console.log(`[DEBUG] Response received (${response.status}), content length: ${response.text?.length || 0} chars`);
+			
+			// Use Mozilla Readability for content extraction
+			console.log(`[DEBUG] Calling extractWithReadability for URL: ${url}`);
+			const readabilityResult = await this.extractWithReadability(url, response.text);
+			
+			console.log(`[DEBUG] Readability result:`, {
+				hasResult: !!readabilityResult,
+				hasTextContent: !!(readabilityResult?.textContent),
+				title: readabilityResult?.title,
+				contentLength: readabilityResult?.textContent?.length || 0,
+				excerptLength: readabilityResult?.excerpt?.length || 0
+			});
+			
+			if (readabilityResult && readabilityResult.textContent) {
+				// Build comprehensive content string
+				let content = '';
+				
+				if (readabilityResult.title) {
+					content += `Title: ${readabilityResult.title}\n\n`;
+				}
+				
+				if (readabilityResult.byline) {
+					content += `Author: ${readabilityResult.byline}\n`;
+				}
+				
+				if (readabilityResult.siteName) {
+					content += `Site: ${readabilityResult.siteName}\n`;
+				}
+				
+				if (readabilityResult.publishedTime) {
+					content += `Published: ${readabilityResult.publishedTime}\n`;
+				}
+				
+				if (content !== '') content += '\n';
+				
+				// Add excerpt if available and different from main content start
+				if (readabilityResult.excerpt && 
+					!readabilityResult.textContent.toLowerCase().startsWith(readabilityResult.excerpt.toLowerCase().substring(0, 50))) {
+					content += `Summary: ${readabilityResult.excerpt}\n\n`;
+				}
+				
+				// Add main content
+				content += `Content: ${readabilityResult.textContent}`;
+				
+				console.log(`[DEBUG] Content built successfully, total length: ${content.length} chars`);
+				console.log(`[DEBUG] Content preview:`, content.substring(0, 300) + '...');
+				
+				// Limit content size for API efficiency
+			if (content.length > 4000) {
+				content = content.substring(0, 4000) + '\n\n[Content truncated for length]';
+					console.log(`[DEBUG] Content truncated to ${content.length} chars`);
+				}
+				
+				console.log(`[DEBUG] Mozilla Readability extracted ${content.length} characters of clean content`);
+				return content;
+			}
+			
+			console.log(`[DEBUG] Mozilla Readability failed - no usable content extracted`);
+			return null;
+			
+		} catch (error) {
+			console.error('Advanced content scraping failed:', error);
+			return null;
+		}
 	}
 
 	/**
@@ -249,6 +617,7 @@ export class SmartExtractionService {
 	 * Fetch and summarize URL content
 	 */
 	private async fetchAndSummarizeURL(url: string): Promise<string> {
+		console.log(`[DEBUG] ==== fetchAndSummarizeURL called for: ${url} ====`);
 		try {
 			// Check cache first
 			const cacheKey = url;
@@ -256,11 +625,31 @@ export class SmartExtractionService {
 			const cacheExpiry = (this.plugin.settings.cacheDurationHours || 24) * 60 * 60 * 1000;
 			
 			if (cached && (Date.now() - cached.timestamp) < cacheExpiry) {
-				console.log('Using cached URL content for:', url);
+				console.log('[DEBUG] Using cached URL content for:', url);
 				return cached.content;
 			}
+			
+			console.log(`[DEBUG] No valid cache found, proceeding with fresh extraction`);
 
-			console.log('Fetching URL content:', url);
+			// Try MCP-based scraping first for better content extraction
+			console.log(`[DEBUG] Step 1: Attempting MCP-based scraping...`);
+			const mcpContent = await this.tryMCPScraping(url);
+			if (mcpContent) {
+				console.log(`[DEBUG] Step 1 SUCCESS: MCP scraping extracted ${mcpContent.length} chars`);
+				console.log(`Successfully scraped ${url} using MCP servers`);
+				const summary = await this.openAIService.summarizeURL(url, mcpContent);
+				
+				// Cache the summary
+				if (this.plugin.settings.cacheAIResponses !== false) {
+					this.urlCache.set(cacheKey, { content: summary, timestamp: Date.now() });
+				}
+				
+				return summary;
+		}
+
+		console.log(`[DEBUG] Step 1 FAILED: MCP scraping returned null, trying fallback methods`);
+		console.log(`[DEBUG] Step 2: Fetching URL content directly...`);
+		console.log('Fetching URL content:', url);
 			
 			// Fetch URL content
 			const response = await requestUrl({
@@ -275,12 +664,27 @@ export class SmartExtractionService {
 				throw new Error(`HTTP ${response.status}`);
 			}
 
-			// Extract text content (basic HTML stripping)
-			let content = response.text;
-			content = content.replace(/<script[^>]*>.*?<\/script>/gi, '');
-			content = content.replace(/<style[^>]*>.*?<\/style>/gi, '');
-			content = content.replace(/<[^>]*>/g, ' ');
-			content = content.replace(/\s+/g, ' ').trim();
+			// Try Mozilla Readability as final fallback
+			console.log(`[DEBUG] Step 3: Attempting Mozilla Readability as fallback...`);
+			console.log('Attempting fallback Mozilla Readability extraction for:', url);
+			const readabilityResult = await this.extractWithReadability(url, response.text);
+			
+			let content = '';
+			if (readabilityResult && readabilityResult.textContent) {
+				// Use clean readability content
+				content = readabilityResult.textContent;
+				console.log(`Fallback Readability extracted ${content.length} characters`);
+			} else {
+				// Ultimate fallback: basic HTML stripping
+				console.log(`[DEBUG] Step 3 FAILED: Mozilla Readability returned null`);
+				console.log(`[DEBUG] Step 4: Using basic HTML stripping as ultimate fallback`);
+				console.log('Using basic HTML stripping as ultimate fallback');
+				content = response.text;
+				content = content.replace(/<script[^>]*>.*?<\/script>/gi, '');
+				content = content.replace(/<style[^>]*>.*?<\/style>/gi, '');
+				content = content.replace(/<[^>]*>/g, ' ');
+				content = content.replace(/\s+/g, ' ').trim();
+			}
 
 			// Limit content size for API
 			if (content.length > 3000) {

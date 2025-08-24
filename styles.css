@@ -2713,7 +2713,7 @@
 /* Smart Extract Styles */
 .crystal-smart-extract-btn {
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	color: white;
+	color: white !important;
 	border: none;
 	padding: 0.5rem 1rem;
 	border-radius: 6px;

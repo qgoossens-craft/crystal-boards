@@ -42,19 +42,27 @@ export class OpenAIService {
 	 * Summarize URL content for task context
 	 */
 	async summarizeURL(url: string, content: string): Promise<string> {
-		const prompt = `Summarize the following webpage content in 2-3 sentences, focusing on actionable information:
+		const prompt = `Extract and summarize the key information from this webpage. Focus on specific details useful for task planning.
 
 URL: ${url}
-Content: ${content.substring(0, 3000)}
+Content: ${content}
 
-Provide a concise summary:`;
+Instructions:
+- Extract the main topic, purpose, or subject matter
+- Identify specific details, requirements, or actionable items  
+- Include relevant names, dates, technologies, or concrete information
+- Avoid generic descriptions - be specific about actual content
+- If it's a discussion/post, include main points discussed
+- Keep concise but informative (2-4 sentences)
+
+Summary:`;
 
 		try {
-			const response = await this.callOpenAI(prompt);
-			return response;
+			const response = await this.callOpenAI(prompt, false); // Don't require JSON for URL summarization
+			return response.trim();
 		} catch (error) {
 			console.error('URL summarization failed:', error);
-			return '';
+			return `Unable to summarize content from ${url}: ${error.message}`;
 		}
 	}
 
@@ -62,33 +70,40 @@ Provide a concise summary:`;
 	 * Build the prompt for task analysis
 	 */
 	private buildTaskAnalysisPrompt(task: ExtractedTask, urlContent?: string): string {
-		let prompt = `You are an intelligent task assistant helping to organize and plan work. Analyze the following task and provide structured insights.
+		let prompt = `You are an intelligent task assistant. Analyze this task and provide structured insights based on all available information.
 
 Task: "${task.cleanText}"
 Tags: ${task.tags.length > 0 ? task.tags.join(', ') : 'none'}`;
 
 		if (urlContent) {
-			prompt += `\n\nRelated URL Content:\n${urlContent.substring(0, 1500)}`;
+			prompt += `
+
+Related Content from URL:
+${urlContent}`;
 		}
 
-		prompt += `\n\nProvide your analysis in the following JSON format:
+		prompt += `
+
+Based on the task description ${urlContent ? 'and the URL content above' : ''}, provide your analysis in JSON format:
+
 {
-  "context": "Brief explanation of what this task is about and why it's important",
-  "description": "A 2-3 sentence detailed description of the task's purpose, scope, and expected outcome",
+  "context": "One clear sentence explaining what this task involves",
+  "description": "2-3 sentences describing the specific purpose, scope, and expected outcome based on ${urlContent ? 'both the task and URL content' : 'the task description'}",
   "nextSteps": [
-    "First actionable sub-task",
-    "Second actionable sub-task",
-    "Third actionable sub-task"
+    "Specific actionable step 1",
+    "Specific actionable step 2", 
+    "Specific actionable step 3"
   ],
   "confidence": 0.85
 }
 
-Notes:
-- Context should be 1 sentence
-- Description should be 2-3 sentences providing details
-- Next steps should be 3-5 specific, actionable items
-- Confidence should be between 0.0 and 1.0 based on how well you understand the task
-- Respond ONLY with valid JSON, no additional text`;
+Guidelines:
+- Use the URL content to provide specific, detailed insights rather than generic descriptions
+- Make the context and description highly specific to what was actually found in the content
+- Create actionable next steps that reflect the actual content and requirements
+- Set confidence based on how much concrete information you have
+- If the URL content is substantial, prioritize it over generic task interpretation
+- Respond with valid JSON only`;
 
 		return prompt;
 	}
@@ -96,7 +111,7 @@ Notes:
 	/**
 	 * Make API call to OpenAI
 	 */
-	private async callOpenAI(prompt: string): Promise<string> {
+	private async callOpenAI(prompt: string, requireJson = true): Promise<string> {
 		if (!this.config.apiKey) {
 			throw new Error('OpenAI API key not configured');
 		}
@@ -130,7 +145,7 @@ Notes:
 				],
 				max_tokens: this.config.maxTokens,
 				temperature: this.config.temperature,
-				response_format: { type: "json_object" }
+				...(requireJson ? { response_format: { type: "json_object" } } : {})
 			})
 		};
 

@@ -31,7 +31,7 @@ export class SmartExtractPreviewModal extends Modal {
 		// Summary stats
 		const statsEl = contentEl.createEl('div', { cls: 'smart-extract-stats' });
 		statsEl.createEl('p', { 
-			text: `📊 ${this.preview.totalTasks} tasks analyzed` 
+			text: `Found ${this.preview.totalTasks} tasks total` 
 		});
 		
 		if (this.preview.estimatedCost > 0) {
@@ -281,8 +281,7 @@ export class SmartExtractPreviewModal extends Modal {
 		const stepsSection = editorEl.createEl('div', { cls: 'editor-section' });
 		stepsSection.createEl('label', { text: 'Next Steps (one per line):' });
 		const stepsTextarea = stepsSection.createEl('textarea', {
-			value: card.aiAnalysis?.nextSteps.join('
-') || '',
+			value: card.aiAnalysis?.nextSteps.join('\n') || '',
 			cls: 'editor-textarea'
 		});
 		stepsTextarea.rows = 4;
@@ -307,8 +306,7 @@ export class SmartExtractPreviewModal extends Modal {
 			this.approval.modifications[cardId] = {
 				title: titleInput.value.trim(),
 				description: descTextarea.value.trim(),
-				nextSteps: stepsTextarea.value.trim().split('
-').filter(s => s.trim())
+				nextSteps: stepsTextarea.value.trim().split('\n').filter(s => s.trim())
 			};
 
 			// Update the card preview display
