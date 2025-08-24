@@ -1390,6 +1390,26 @@
 	min-height: 0;
 }
 
+/* Custom Scrollbar with Accent Color */
+.crystal-card-modal-content::-webkit-scrollbar {
+	width: 8px;
+}
+
+.crystal-card-modal-content::-webkit-scrollbar-track {
+	background: var(--background-modifier-border);
+	border-radius: 4px;
+}
+
+.crystal-card-modal-content::-webkit-scrollbar-thumb {
+	background: var(--interactive-accent);
+	border-radius: 4px;
+	transition: background-color 0.2s ease;
+}
+
+.crystal-card-modal-content::-webkit-scrollbar-thumb:hover {
+	background: var(--interactive-accent-hover);
+}
+
 .crystal-card-modal-footer {
 	padding: 1rem 1.5rem;
 	border-top: 1px solid var(--background-modifier-border);
