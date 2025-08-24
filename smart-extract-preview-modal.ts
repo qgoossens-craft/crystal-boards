@@ -74,10 +74,13 @@ export class SmartExtractPreviewModal extends Modal {
 		previewBtn.onclick = () => this.generateFullPreview();
 
 		const approveBtn = buttonsEl.createEl('button', { 
-			text: 'Extract All',
+			text: this.getExtractButtonText(),
 			cls: 'mod-cta'
 		});
 		approveBtn.onclick = () => this.approveExtraction();
+
+		// Set initial button state
+		this.updateExtractButton();
 	}
 
 	private renderCardPreview(container: HTMLElement, card: SmartCard) {
@@ -99,6 +102,8 @@ export class SmartExtractPreviewModal extends Modal {
 					this.approval.selectedCards.splice(index, 1);
 				}
 			}
+			// Update the extract button text
+			this.updateExtractButton();
 		};
 
 		const titleEl = headerEl.createEl('span', { 
@@ -248,6 +253,25 @@ export class SmartExtractPreviewModal extends Modal {
 
 	getApproval(): SmartExtractApproval {
 		return this.approval;
+	}
+
+	private getExtractButtonText(): string {
+		const selectedCount = this.approval.selectedCards.length;
+		if (selectedCount === 0) {
+			return 'Select todos to extract';
+		} else if (selectedCount === 1) {
+			return 'Extract 1 todo';
+		} else {
+			return `Extract ${selectedCount} todos`;
+		}
+	}
+
+	private updateExtractButton(): void {
+		const approveBtn = this.contentEl.querySelector('.mod-cta') as HTMLButtonElement;
+		if (approveBtn) {
+			approveBtn.textContent = this.getExtractButtonText();
+			approveBtn.disabled = this.approval.selectedCards.length === 0;
+		}
 	}
 
 	/**
