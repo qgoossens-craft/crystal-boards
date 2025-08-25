@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Modal, Setting, App, TFile, MarkdownRenderer } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Modal, Setting, App, TFile, MarkdownRenderer, Notice } from 'obsidian';
 import CrystalBoardsPlugin from './main';
 import { Board, Column, Card, BOARD_VIEW_TYPE } from './types';
 import { DragDropManager } from './drag-drop';
@@ -10,6 +10,7 @@ export class BoardView extends ItemView {
 	dragDropManager: DragDropManager;
 	selectedCards: Set<string> = new Set();
 	bulkActionMode: boolean = false;
+	private hasRetried: boolean = false;
 	
 	// Responsive resize properties
 	private resizeObserver: ResizeObserver | null = null;
@@ -303,22 +304,33 @@ export class BoardView extends ItemView {
 			text: '← Back to Dashboard',
 			cls: 'crystal-board-error-btn'
 		});
-		dashboardBtn.onclick = () => {
+		dashboardBtn.onclick = async () => {
+			// Try to refresh board data once before going to dashboard
+			if (!this.hasRetried) {
+				this.hasRetried = true;
+				dashboardBtn.textContent = '⏳ Retrying once...';
+				dashboardBtn.disabled = true;
+				
+				try {
+					console.log('Auto-retrying board load...');
+					await this.refreshBoardData();
+					console.log('Auto-retry successful');
+					// If successful, don't go to dashboard, stay on the board
+					return;
+				} catch (error) {
+					console.error('Auto-retry failed:', error);
+					// Continue to dashboard on failure
+				}
+				
+				dashboardBtn.textContent = '← Back to Dashboard';
+				dashboardBtn.disabled = false;
+			}
+			
+			// Go to dashboard
 			this.plugin.openDashboardInCurrentTab();
 		};
 		
-		// Auto-retry after 5 seconds
-		setTimeout(async () => {
-			if (errorContainer.parentElement) {
-				console.log('Auto-retrying board load...');
-				try {
-					await this.refreshBoardData();
-					console.log('Auto-retry successful');
-				} catch (error) {
-					console.error('Auto-retry failed:', error);
-				}
-			}
-		}, 5000);
+// Auto-retry removed - users can manually return to dashboard if needed
 	}
 
 	/**

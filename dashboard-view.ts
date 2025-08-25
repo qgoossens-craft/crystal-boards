@@ -57,7 +57,7 @@ export class DashboardView extends ItemView {
 		// Listen for theme changes
 		if (!this.themeChangeHandler) {
 			this.themeChangeHandler = () => {
-				console.log('🎨 Dashboard theme change detected - refreshing');
+				
 				// Refresh the entire dashboard to update any theme-dependent elements
 				this.renderDashboard();
 			};
