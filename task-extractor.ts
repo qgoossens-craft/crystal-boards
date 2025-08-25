@@ -53,6 +53,12 @@ export class TaskExtractor {
 				// Skip empty tasks
 				if (!taskText) continue;
 
+				// Check if task contains hashtags
+				const hasHashtags = /#[\w-]+/g.test(taskText);
+				
+				// Only extract todos with hashtags (skip those without hashtags as they are small/quick todos)
+				if (!hasHashtags) continue;
+
 				const extractedTask = this.parseTaskLine(taskText, line, i + 1);
 				tasks.push(extractedTask);
 			}
