@@ -298,35 +298,10 @@ export class BoardView extends ItemView {
 		// Action buttons
 		const actionsContainer = errorContainer.createEl('div', { cls: 'crystal-board-error-actions' });
 		
-		// Retry button
-		const retryBtn = actionsContainer.createEl('button', {
-			text: '🔄 Try Again',
-			cls: 'crystal-board-error-btn'
-		});
-		retryBtn.onclick = async () => {
-			retryBtn.textContent = '⏳ Retrying...';
-			retryBtn.disabled = true;
-			
-			try {
-				// Try to refresh board data first, then render
-				await this.refreshBoardData();
-				console.log('Board data refreshed successfully');
-			} catch (error) {
-				console.error('Retry failed:', error);
-				retryBtn.textContent = '❌ Still Failed';
-				setTimeout(() => {
-					if (retryBtn && retryBtn.parentElement) {
-						retryBtn.textContent = '🔄 Try Again';
-						retryBtn.disabled = false;
-					}
-				}, 2000);
-			}
-		};
-		
-		// Back to dashboard button
+		// Back to dashboard button (primary accent styling)
 		const dashboardBtn = actionsContainer.createEl('button', {
 			text: '← Back to Dashboard',
-			cls: 'crystal-board-error-btn crystal-board-error-btn-secondary'
+			cls: 'crystal-board-error-btn'
 		});
 		dashboardBtn.onclick = () => {
 			this.plugin.openDashboardInCurrentTab();

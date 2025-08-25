@@ -4799,13 +4799,5 @@ button.mod-warning:hover {
 	transform: translateY(-1px);
 }
 
-.crystal-board-error-btn-secondary {
-	background: var(--background-secondary);
-	color: var(--text-normal);
-	border: 1px solid var(--background-modifier-border);
-}
-
-.crystal-board-error-btn-secondary:hover {
-	background: var(--background-modifier-hover);
-}
+/* Removed secondary styling - Back to Dashboard button now uses primary accent styling */
 
