@@ -1,4 +1,4 @@
-import { Plugin, Notice } from 'obsidian';
+import { Plugin, Notice, TFile } from 'obsidian';
 import { DashboardView } from './dashboard-view';
 import { BoardView } from './board-view';
 import { DataManager } from './data-manager';
@@ -31,6 +31,9 @@ export default class CrystalBoardsPlugin extends Plugin {
 		
 		// Initialize todo AI service
 		this.todoAIService = new TodoAIService(this);
+		
+		// Set up file watcher for task source file
+		this.setupTaskSourceFileWatcher();
 
 		// Register views
 		this.registerView(
@@ -138,6 +141,67 @@ export default class CrystalBoardsPlugin extends Plugin {
 		}
 
 		workspace.revealLeaf(leaf);
+	}
+
+	/**
+	 * Setup file watcher for the task source file
+	 * Automatically updates boards when the todo file changes
+	 */
+	private setupTaskSourceFileWatcher(): void {
+		// Watch for changes to the task source file
+		this.registerEvent(
+			this.app.vault.on('modify', async (file) => {
+				// Check if the modified file is our task source file
+				if (this.settings.taskSourcePath && 
+					file instanceof TFile && 
+					file.path === this.settings.taskSourcePath) {
+					
+					console.log(`Task source file modified: ${file.path}, updating boards...`);
+					
+					// Debounce to avoid multiple rapid updates
+					if (this.taskSourceUpdateTimeout) {
+						clearTimeout(this.taskSourceUpdateTimeout);
+					}
+					
+					this.taskSourceUpdateTimeout = window.setTimeout(async () => {
+						// Re-extract tasks and update boards
+						await this.updateBoardsFromTaskSource();
+					}, 500); // Wait 500ms after last change
+				}
+			})
+		);
+	}
+
+	private taskSourceUpdateTimeout: number | null = null;
+
+	/**
+	 * Update boards when task source file changes
+	 */
+	private async updateBoardsFromTaskSource(): Promise<void> {
+		try {
+			// Get current task counts from source
+			const stats = await this.taskExtractionService.getExtractionStats();
+			
+			// Update dashboard if it's open
+			const dashboardLeaves = this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE);
+			for (const leaf of dashboardLeaves) {
+				if (leaf.view instanceof DashboardView) {
+					await leaf.view.renderDashboard();
+				}
+			}
+			
+			// Update any open board views
+			const boardLeaves = this.app.workspace.getLeavesOfType(BOARD_VIEW_TYPE);
+			for (const leaf of boardLeaves) {
+				if (leaf.view instanceof BoardView) {
+					await leaf.view.refreshBoardData();
+				}
+			}
+			
+			console.log(`Boards updated: ${stats.tasksInSource} tasks in source file`);
+		} catch (error) {
+			console.error('Error updating boards from task source:', error);
+		}
 	}
 
 	async openDashboardInCurrentTab(): Promise<void> {

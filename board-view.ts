@@ -10,7 +10,6 @@ export class BoardView extends ItemView {
 	dragDropManager: DragDropManager;
 	selectedCards: Set<string> = new Set();
 	bulkActionMode: boolean = false;
-	private hasRetried: boolean = false;
 	
 	// Responsive resize properties
 	private resizeObserver: ResizeObserver | null = null;
@@ -171,6 +170,7 @@ export class BoardView extends ItemView {
 		const { contentEl } = this;
 		contentEl.empty();
 		
+		
 		// Safety check: ensure board is properly initialized
 		if (!this.board || !this.board.name) {
 			this.renderBoardError(contentEl);
@@ -304,29 +304,8 @@ export class BoardView extends ItemView {
 			text: '← Back to Dashboard',
 			cls: 'crystal-board-error-btn'
 		});
-		dashboardBtn.onclick = async () => {
-			// Try to refresh board data once before going to dashboard
-			if (!this.hasRetried) {
-				this.hasRetried = true;
-				dashboardBtn.textContent = '⏳ Retrying once...';
-				dashboardBtn.disabled = true;
-				
-				try {
-					console.log('Auto-retrying board load...');
-					await this.refreshBoardData();
-					console.log('Auto-retry successful');
-					// If successful, don't go to dashboard, stay on the board
-					return;
-				} catch (error) {
-					console.error('Auto-retry failed:', error);
-					// Continue to dashboard on failure
-				}
-				
-				dashboardBtn.textContent = '← Back to Dashboard';
-				dashboardBtn.disabled = false;
-			}
-			
-			// Go to dashboard
+		dashboardBtn.onclick = () => {
+			// Directly go to dashboard
 			this.plugin.openDashboardInCurrentTab();
 		};
 		
