@@ -862,16 +862,6 @@ You can include:
 		});
 		addBtn.onclick = () => this.addNewTodo(section);
 
-		// Add sample todo button for testing AI features
-		const sampleBtn = titleContainer.createEl('button', {
-			text: '🧪 Test AI Todo',
-			cls: 'crystal-add-btn crystal-sample-btn'
-		});
-		sampleBtn.onclick = () => this.addSampleTodo(section);
-		sampleBtn.style.marginLeft = '0.5rem';
-		sampleBtn.style.fontSize = '0.8rem';
-		sampleBtn.style.padding = '0.3rem 0.6rem';
-
 		// Todos display
 		const todosDisplay = section.createEl('div', { cls: 'crystal-todos-display' });
 		this.updateTodosDisplay(todosDisplay);
@@ -1335,28 +1325,7 @@ You can include:
 		}
 	}
 
-	private addSampleTodo(section: HTMLElement): void {
-		const todoId = this.generateId();
-		const sampleTodo: TodoItem = {
-			id: todoId,
-			text: 'Research this article: https://obsidian.md/blog/new-obsidian-icon/',
-			completed: false,
-			created: Date.now()
-		};
-		
-		this.cardTodos.push(sampleTodo);
-		this.updateTodosDisplay(section.querySelector('.crystal-todos-display') as HTMLElement);
-		
-		// Update progress bar
-		const progressContainer = this.contentEl.querySelector('.crystal-progress-container');
-		if (progressContainer) {
-			progressContainer.remove();
-		}
-		if (this.cardTodos.length > 0) {
-			const headerEl = this.contentEl.querySelector('.crystal-card-modal-header') as HTMLElement;
-			this.renderProgressBar(headerEl);
-		}
-	}
+	
 
 	private updateTodosDisplay(container: HTMLElement): void {
 		container.empty();
