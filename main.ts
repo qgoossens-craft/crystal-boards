@@ -14,9 +14,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 	taskExtractionService: TaskExtractionService;
 	smartExtractionService: SmartExtractionService;
 	todoAIService: TodoAIService;
-	private accentColorObserver: MutationObserver | null = null;
-
-	async onload() {
+		async onload() {
 		console.log('Loading Crystal Boards plugin');
 
 		// Initialize data manager
@@ -113,11 +111,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 	onunload() {
 		console.log('Unloading Crystal Boards plugin');
 		
-		// Clean up accent color listener
-		if (this.accentColorObserver) {
-			this.accentColorObserver.disconnect();
-			this.accentColorObserver = null;
-		}
+
 	}
 
 	async activateDashboardView(): Promise<void> {
@@ -225,7 +219,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 		let currentAccentColor = this.getCurrentAccentColor();
 		console.log('🎨 Crystal Boards: Initial accent color detected:', currentAccentColor);
 		
-		// Method 1: Use periodic checking (most reliable for CSS custom properties)
+		// Use periodic checking to detect accent color changes
 		this.registerInterval(
 			window.setInterval(() => {
 				const newAccentColor = this.getCurrentAccentColor();
@@ -236,66 +230,6 @@ export default class CrystalBoardsPlugin extends Plugin {
 				}
 			}, 1000) // Check every 1 second for responsiveness
 		);
-
-		// Method 2: Listen for Obsidian workspace events that might indicate theme changes
-		this.app.workspace.on('css-change', () => {
-			const newAccentColor = this.getCurrentAccentColor();
-			if (newAccentColor !== currentAccentColor && newAccentColor) {
-				console.log('🎨 Crystal Boards: Accent color changed via css-change event from', currentAccentColor, 'to', newAccentColor);
-				currentAccentColor = newAccentColor;
-				this.refreshAllViews();
-			}
-		});
-
-		// Method 3: MutationObserver for style elements and link elements (CSS files)
-		this.accentColorObserver = new MutationObserver((mutations) => {
-			let shouldCheck = false;
-			mutations.forEach((mutation) => {
-				// Check for changes to style elements or link elements
-				if (mutation.type === 'childList') {
-					mutation.addedNodes.forEach((node) => {
-						if (node.nodeType === Node.ELEMENT_NODE) {
-							const element = node as Element;
-							if (element.tagName === 'STYLE' || element.tagName === 'LINK') {
-								shouldCheck = true;
-							}
-						}
-					});
-				}
-				// Check for attribute changes on html/body
-				if (mutation.type === 'attributes' && (mutation.target === document.documentElement || mutation.target === document.body)) {
-					shouldCheck = true;
-				}
-			});
-			
-			if (shouldCheck) {
-				// Small delay to allow CSS to be processed
-				setTimeout(() => {
-					const newAccentColor = this.getCurrentAccentColor();
-					if (newAccentColor !== currentAccentColor && newAccentColor) {
-						console.log('🎨 Crystal Boards: Accent color changed via MutationObserver from', currentAccentColor, 'to', newAccentColor);
-						currentAccentColor = newAccentColor;
-						this.refreshAllViews();
-					}
-				}, 100);
-			}
-		});
-
-		// Observe head for style/link changes and body/html for class changes
-		this.accentColorObserver.observe(document.head, {
-			childList: true,
-			subtree: true
-		});
-		
-		this.accentColorObserver.observe(document.documentElement, {
-			attributes: true,
-			attributeFilter: ['class', 'style']
-		});
-
-		this.accentColorObserver.observe(document.body, {
-			attributes: true,
-			attributeFilter: ['class', 'style']
-		});
 	}
 
 	/**

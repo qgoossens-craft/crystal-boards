@@ -169,6 +169,15 @@ export class BoardView extends ItemView {
 	async renderBoard(): Promise<void> {
 		const { contentEl } = this;
 		contentEl.empty();
+		
+		// Safety check: ensure board is properly initialized
+		if (!this.board || !this.board.name) {
+			contentEl.createEl('div', { 
+				text: 'Board not properly loaded. Please return to dashboard and try again.',
+				cls: 'crystal-board-error'
+			});
+			return;
+		}
 
 		// Board header
 		const headerEl = contentEl.createEl('div', { cls: 'crystal-board-header' });
@@ -239,7 +248,7 @@ export class BoardView extends ItemView {
 		const columnsContainer = boardContainer.createEl('div', { cls: 'crystal-board-columns' });
 
 		// Render columns
-		const sortedColumns = this.board.columns.sort((a, b) => a.position - b.position);
+		const sortedColumns = (this.board.columns || []).sort((a, b) => a.position - b.position);
 		for (const column of sortedColumns) {
 			await this.renderColumn(columnsContainer, column);
 		}

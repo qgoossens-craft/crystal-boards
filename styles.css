@@ -4615,3 +4615,19 @@
 	transform: none;
 }
 
+/* Board Error Styles */
+.crystal-board-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem;
+	text-align: center;
+	color: var(--text-error);
+	background: var(--background-modifier-error);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	margin: 2rem;
+	font-size: 1rem;
+	font-weight: 500;
+}
+
