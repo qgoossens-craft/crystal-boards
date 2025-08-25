@@ -912,7 +912,11 @@ export class SmartExtractionService {
 		// We need to extract tasks from the source again since the base service
 		// doesn't expose the parsed tasks directly
 		const extractor = this.baseExtractionService['extractor']; // Access private field
-		return await extractor.extractTasksFromSource();
+		const allTasks = await extractor.extractTasksFromSource();
+		
+		// For smart extraction, only process tasks with hashtags
+		// This maintains backward compatibility while fixing the counter
+		return allTasks.filter(task => task.hasHashtags);
 	}
 
 	/**

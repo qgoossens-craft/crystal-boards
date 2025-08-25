@@ -95,6 +95,7 @@ export interface ExtractedTask {
 	urls: { url: string; title: string }[];
 	originalLine: string;
 	lineNumber: number;
+	hasHashtags?: boolean; // Flag to indicate if task has hashtags
 }
 
 export interface PluginSettings {

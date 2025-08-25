@@ -156,7 +156,8 @@ export default class CrystalBoardsPlugin extends Plugin {
 					file instanceof TFile && 
 					file.path === this.settings.taskSourcePath) {
 					
-					console.log(`Task source file modified: ${file.path}, updating boards...`);
+					console.log(`[DEBUG] Task source file modified: ${file.path}, triggering update...`);
+					console.log(`[DEBUG] Current settings path: ${this.settings.taskSourcePath}`);
 					
 					// Debounce to avoid multiple rapid updates
 					if (this.taskSourceUpdateTimeout) {
@@ -179,13 +180,18 @@ export default class CrystalBoardsPlugin extends Plugin {
 	 */
 	private async updateBoardsFromTaskSource(): Promise<void> {
 		try {
+			console.log('Task source file changed, updating boards...');
+			
 			// Get current task counts from source
 			const stats = await this.taskExtractionService.getExtractionStats();
+			console.log(`[DEBUG] Current stats - Tasks in source: ${stats.tasksInSource}, File exists: ${stats.sourceFileExists}`);
 			
 			// Update dashboard if it's open
 			const dashboardLeaves = this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE);
+			console.log(`[DEBUG] Found ${dashboardLeaves.length} open dashboard leaves`);
 			for (const leaf of dashboardLeaves) {
 				if (leaf.view instanceof DashboardView) {
+					console.log('[DEBUG] Updating dashboard view...');
 					await leaf.view.renderDashboard();
 				}
 			}

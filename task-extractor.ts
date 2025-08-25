@@ -56,10 +56,11 @@ export class TaskExtractor {
 				// Check if task contains hashtags
 				const hasHashtags = /#[\w-]+/g.test(taskText);
 				
-				// Only extract todos with hashtags (skip those without hashtags as they are small/quick todos)
-				if (!hasHashtags) continue;
+				// Note: We now count all tasks for accurate counter updates
+				// Smart extraction will still filter for hashtags during processing
 
 				const extractedTask = this.parseTaskLine(taskText, line, i + 1);
+				extractedTask.hasHashtags = hasHashtags; // Add flag to track hashtag presence
 				tasks.push(extractedTask);
 			}
 		}
