@@ -4618,16 +4618,73 @@
 /* Board Error Styles */
 .crystal-board-error {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 2rem;
+	padding: 3rem 2rem;
 	text-align: center;
-	color: var(--text-error);
-	background: var(--background-modifier-error);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 8px;
+	color: var(--text-normal);
+	background: var(--background-primary);
+	border: 2px dashed var(--background-modifier-border);
+	border-radius: 12px;
 	margin: 2rem;
-	font-size: 1rem;
+	font-size: 1.1rem;
 	font-weight: 500;
+	line-height: 1.5;
+	gap: 1rem;
+	min-height: 200px;
+}
+
+.crystal-board-error-icon {
+	font-size: 3rem;
+	color: var(--text-muted);
+	margin-bottom: 0.5rem;
+}
+
+.crystal-board-error-title {
+	color: var(--text-error);
+	font-size: 1.2rem;
+	font-weight: 600;
+	margin: 0;
+}
+
+.crystal-board-error-message {
+	color: var(--text-muted);
+	font-size: 1rem;
+	margin: 0;
+	max-width: 600px;
+}
+
+.crystal-board-error-actions {
+	display: flex;
+	gap: 1rem;
+	margin-top: 1rem;
+}
+
+.crystal-board-error-btn {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 6px;
+	padding: 0.75rem 1.5rem;
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.crystal-board-error-btn:hover {
+	background: var(--interactive-accent-hover);
+	transform: translateY(-1px);
+}
+
+.crystal-board-error-btn-secondary {
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.crystal-board-error-btn-secondary:hover {
+	background: var(--background-modifier-hover);
 }
 

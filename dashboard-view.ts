@@ -293,8 +293,7 @@ export class DashboardView extends ItemView {
 
 		// Add tooltip/description
 		if (this.plugin.settings.useSmartExtract) {
-			extractBtn.title = `AI-powered extraction from ${this.plugin.settings.taskSourcePath}
-Analyzes context and generates descriptions`;
+			extractBtn.title = `AI-powered extraction from ${this.plugin.settings.taskSourcePath}\nAnalyzes context and generates descriptions`;
 		} else {
 			extractBtn.title = `Extract tasks from ${this.plugin.settings.taskSourcePath}`;
 		}
@@ -319,20 +318,28 @@ Analyzes context and generates descriptions`;
 					// Only show success/failure messages if the extraction actually happened
 					if (result.success) {
 						new Notice(`✅ Smart extracted ${result.tasksAnalyzed} tasks with AI analysis`);
-						// Refresh dashboard to show new cards
+						// Refresh dashboard to show new cards - this will recreate the footer
 						await this.renderDashboard();
+						return; // Exit early to avoid the finally block since button no longer exists
 					} else if (result.errors.length > 0 && !result.errors.includes('Smart extraction cancelled by user')) {
 						new Notice(`❌ Smart extraction failed: ${result.errors.join(', ')}`);
 					}
 					// If cancelled by user, don't show error message
 				} else {
 					await this.plugin.taskExtractionService.quickExtract();
-					// Refresh dashboard to show new cards
+					// Refresh dashboard to show new cards - this will recreate the footer
 					await this.renderDashboard();
+					return; // Exit early to avoid the finally block since button no longer exists
 				}
 			} catch (error) {
 				console.error('Task extraction failed:', error);
 				new Notice(`❌ ${isSmartExtract ? 'Smart' : 'Task'} extraction failed: ${error.message}`);
+			} finally {
+				// Only reset the button if it still exists (not recreated by renderDashboard)
+				if (extractBtn && extractBtn.parentElement) {
+					extractBtn.disabled = false;
+					extractBtn.setText(this.plugin.settings.useSmartExtract ? '🤖 Smart Extract' : '📥 Extract Tasks');
+				}
 			}
 		};
 

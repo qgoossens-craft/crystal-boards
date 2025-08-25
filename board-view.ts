@@ -172,10 +172,7 @@ export class BoardView extends ItemView {
 		
 		// Safety check: ensure board is properly initialized
 		if (!this.board || !this.board.name) {
-			contentEl.createEl('div', { 
-				text: 'Board not properly loaded. Please return to dashboard and try again.',
-				cls: 'crystal-board-error'
-			});
+			this.renderBoardError(contentEl);
 			return;
 		}
 
@@ -268,6 +265,115 @@ export class BoardView extends ItemView {
 				this.forceColumnResize();
 			}, 200);
 		}, 100);
+	}
+
+	/**
+	 * Render board error state with recovery options
+	 */
+	private renderBoardError(contentEl: HTMLElement): void {
+		const errorContainer = contentEl.createEl('div', { cls: 'crystal-board-error' });
+		
+		// Error icon
+		errorContainer.createEl('div', { 
+			text: '⚠️', 
+			cls: 'crystal-board-error-icon' 
+		});
+		
+		// Error title
+		errorContainer.createEl('h2', { 
+			text: 'Board Loading Error', 
+			cls: 'crystal-board-error-title' 
+		});
+		
+		// Error message
+		const message = !this.board 
+			? 'Board data is not available. This might be a temporary loading issue.'
+			: 'Board data is incomplete or corrupted.';
+			
+		errorContainer.createEl('p', { 
+			text: message, 
+			cls: 'crystal-board-error-message' 
+		});
+		
+		// Action buttons
+		const actionsContainer = errorContainer.createEl('div', { cls: 'crystal-board-error-actions' });
+		
+		// Retry button
+		const retryBtn = actionsContainer.createEl('button', {
+			text: '🔄 Try Again',
+			cls: 'crystal-board-error-btn'
+		});
+		retryBtn.onclick = async () => {
+			retryBtn.textContent = '⏳ Retrying...';
+			retryBtn.disabled = true;
+			
+			try {
+				// Try to refresh board data first, then render
+				await this.refreshBoardData();
+				console.log('Board data refreshed successfully');
+			} catch (error) {
+				console.error('Retry failed:', error);
+				retryBtn.textContent = '❌ Still Failed';
+				setTimeout(() => {
+					if (retryBtn && retryBtn.parentElement) {
+						retryBtn.textContent = '🔄 Try Again';
+						retryBtn.disabled = false;
+					}
+				}, 2000);
+			}
+		};
+		
+		// Back to dashboard button
+		const dashboardBtn = actionsContainer.createEl('button', {
+			text: '← Back to Dashboard',
+			cls: 'crystal-board-error-btn crystal-board-error-btn-secondary'
+		});
+		dashboardBtn.onclick = () => {
+			this.plugin.openDashboardInCurrentTab();
+		};
+		
+		// Auto-retry after 5 seconds
+		setTimeout(async () => {
+			if (errorContainer.parentElement) {
+				console.log('Auto-retrying board load...');
+				try {
+					await this.refreshBoardData();
+					console.log('Auto-retry successful');
+				} catch (error) {
+					console.error('Auto-retry failed:', error);
+				}
+			}
+		}, 5000);
+	}
+
+	/**
+	 * Update the board data and re-render
+	 */
+	async updateBoard(board: Board): Promise<void> {
+		this.board = board;
+		await this.renderBoard();
+	}
+	
+	/**
+	 * Refresh the board by reloading data from plugin
+	 */
+	async refreshBoardData(): Promise<void> {
+		if (this.board?.id) {
+			try {
+				const boards = await this.plugin.dataManager.getBoards();
+				const updatedBoard = boards.find(b => b.id === this.board.id);
+				if (updatedBoard) {
+					await this.updateBoard(updatedBoard);
+				} else {
+					// Board no longer exists, show error and go to dashboard
+					new Notice('Board no longer exists. Returning to dashboard.');
+					await this.plugin.openDashboardInCurrentTab();
+				}
+			} catch (error) {
+				console.error('Failed to refresh board data:', error);
+				throw error;
+			}
+		}
 	}
 
 	/**
