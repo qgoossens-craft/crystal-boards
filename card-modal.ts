@@ -53,13 +53,91 @@ export class CardModal extends Modal {
 		this.linkManager = new LinkManager(app);
 		this.linkPreviewManager = new LinkPreviewManager(app, this.linkManager);
 	}
+	/**
+	 * Discover notes in the card's folder structure and update linked notes
+	 */
+	private async discoverAndUpdateLinkedNotes(): Promise<void> {
+		try {
+			console.log('Discovering notes in card folder structure...');
+			
+			// Get the board to determine folder structure
+			const board = this.plugin.dataManager.getBoardById(this.boardId);
+			if (!board) {
+				console.warn('Board not found for note discovery');
+				return;
+			}
 
-	onOpen(): void {
+			// Build expected folder path: Kanban/BoardName/CardName/
+			const sanitizedCardTitle = this.sanitizeFileName(this.cardTitle);
+			const kanbanFolder = this.plugin.settings.kanbanFolderPath || 'Kanban';
+			const cardFolderPath = `${kanbanFolder}/${board.name}/${sanitizedCardTitle}`;
+			
+			console.log('Searching for notes in folder:', cardFolderPath);
+
+			// Check if the card's folder exists
+			const folderExists = await this.app.vault.adapter.exists(cardFolderPath);
+			if (!folderExists) {
+				console.log('Card folder does not exist yet:', cardFolderPath);
+				return;
+			}
+
+			// Get all files in the card's folder
+			const folderContents = await this.app.vault.adapter.list(cardFolderPath);
+			
+			// Filter for markdown files
+			const markdownFiles = folderContents.files.filter(filePath => 
+				filePath.endsWith('.md')
+			);
+
+			console.log(`Found ${markdownFiles.length} markdown files in card folder`);
+
+			// Add discovered notes to cardNoteLinks if they're not already there
+			let newNotesFound = 0;
+			for (const filePath of markdownFiles) {
+				if (!this.cardNoteLinks.includes(filePath)) {
+					this.cardNoteLinks.push(filePath);
+					newNotesFound++;
+					console.log('Discovered new note:', filePath);
+				}
+			}
+
+			// Also check for notes that might be linked but no longer exist
+			const existingLinks = [...this.cardNoteLinks];
+			for (const linkPath of existingLinks) {
+				// Check if this link is supposed to be in the card folder
+				if (linkPath.startsWith(cardFolderPath)) {
+					const fileExists = await this.app.vault.adapter.exists(linkPath);
+					if (!fileExists) {
+						// Remove non-existent files from the card folder
+						const index = this.cardNoteLinks.indexOf(linkPath);
+						if (index > -1) {
+							this.cardNoteLinks.splice(index, 1);
+							console.log('Removed non-existent note from card folder:', linkPath);
+						}
+					}
+				}
+			}
+
+			if (newNotesFound > 0) {
+				console.log(`Discovery complete: ${newNotesFound} new notes found and added`);
+			} else {
+				console.log('Discovery complete: no new notes found');
+			}
+
+		} catch (error) {
+			console.error('Error discovering linked notes:', error);
+		}
+	}
+
+	async onOpen(): Promise<void> {
 		const { contentEl } = this;
 		contentEl.empty();
 		
 		// Apply CSS class to the modal itself for proper styling
 		this.modalEl.addClass('crystal-card-modal');
+
+		// Discover and update linked notes from card folder
+		await this.discoverAndUpdateLinkedNotes();
 
 		// Modal header
 		const headerEl = contentEl.createEl('div', { cls: 'crystal-card-modal-header' });
@@ -342,155 +420,206 @@ You can include:
 		const notesDisplay = section.createEl('div', { cls: 'crystal-notes-display' });
 		this.updateNotesDisplay(notesDisplay);
 
-		// Enhanced note search container
-		const searchContainer = section.createEl('div', { cls: 'crystal-note-search-container' });
-		
-		// Search header
-		const searchHeader = searchContainer.createEl('div', { cls: 'crystal-search-header' });
-		searchHeader.createEl('h4', { 
-			text: '🔗 Link a Note', 
-			cls: 'crystal-search-title' 
-		});
-		searchHeader.createEl('span', { 
-			text: 'Search your vault to connect relevant notes', 
-			cls: 'crystal-search-subtitle' 
+		// Create Linked Note button (using Obsidian's Setting component for consistency)
+		new Setting(section)
+			.setName('Create New Note')
+			.setDesc('Create a new note linked to this card')
+			.addButton((btn) => {
+				btn.setButtonText('📝 Create Linked Note')
+					.setCta()
+					.onClick(() => this.createLinkedNote());
+			});
+
+		// Search for existing notes (using Setting component for consistency)
+		new Setting(section)
+			.setName('Link Existing Note')
+			.setDesc('Search and link existing notes from your vault')
+			.addText((text) => {
+				text.setPlaceholder('Search notes by name, path, or content...')
+					.onChange((value) => {
+						this.performNotesSearch(value, section);
+					});
+				
+				// Store reference for search functionality
+				const searchInput = text.inputEl;
+				searchInput.classList.add('crystal-notes-search-input');
+				
+				// Add keyboard navigation
+				searchInput.addEventListener('keydown', (e) => {
+					this.handleSearchKeydown(e, section);
+				});
+			});
+
+		// Search results container
+		const resultsContainer = section.createEl('div', { cls: 'crystal-notes-search-results' });
+		resultsContainer.style.display = 'none'; // Hidden initially
+
+		// Store references for search functionality
+		(section as any).searchResultsContainer = resultsContainer;
+		(section as any).searchTimeout = null;
+		(section as any).selectedIndex = -1;
+	}
+
+	/**
+	 * Perform notes search with simplified interface
+	 */
+	private async performNotesSearch(searchTerm: string, section: HTMLElement): Promise<void> {
+		const resultsContainer = (section as any).searchResultsContainer as HTMLElement;
+		let searchTimeout = (section as any).searchTimeout;
+
+		// Clear previous timeout
+		if (searchTimeout) {
+			clearTimeout(searchTimeout);
+		}
+
+		// Clear existing results
+		resultsContainer.empty();
+		(section as any).selectedIndex = -1;
+
+		if (!searchTerm.trim()) {
+			resultsContainer.style.display = 'none';
+			return;
+		}
+
+		// Show searching state
+		resultsContainer.style.display = 'block';
+		resultsContainer.createEl('div', { 
+			text: 'Searching...', 
+			cls: 'crystal-search-status searching' 
 		});
 
-		// Search input with enhanced styling
-		const inputContainer = searchContainer.createEl('div', { cls: 'crystal-search-input-container' });
-		
-		const searchIcon = inputContainer.createEl('span', { 
-			cls: 'crystal-search-icon',
-			text: '🔍'
-		});
-		
-		const searchInput = inputContainer.createEl('input', {
-			type: 'text',
-			cls: 'crystal-search-input',
-			placeholder: 'Search notes by name, path, or content...',
-			attr: {
-				'autocomplete': 'off',
-				'spellcheck': 'false'
+		// Debounce search
+		searchTimeout = setTimeout(async () => {
+			try {
+				const results = await this.performEnhancedSearch(searchTerm);
+				this.displaySimpleSearchResults(results, resultsContainer, section);
+			} catch (error) {
+				console.error('Search error:', error);
+				resultsContainer.empty();
+				resultsContainer.createEl('div', { 
+					text: 'Search failed. Please try again.', 
+					cls: 'crystal-search-status error' 
+				});
 			}
-		});
+		}, 300);
 
-		const clearBtn = inputContainer.createEl('button', {
-			cls: 'crystal-search-clear',
-			text: '×',
-			attr: { 'aria-label': 'Clear search' }
-		});
-		clearBtn.style.display = 'none';
+		(section as any).searchTimeout = searchTimeout;
+	}
 
-		// Search results container with loading state
-		const resultsContainer = searchContainer.createEl('div', { cls: 'crystal-search-results-container' });
-		
-		// Search status/help text
-		const searchStatus = resultsContainer.createEl('div', { cls: 'crystal-search-status' });
+	/**
+	 * Display search results in simplified format
+	 */
+	private displaySimpleSearchResults(results: any[], resultsContainer: HTMLElement, section: HTMLElement): void {
+		resultsContainer.empty();
 
-		// Keyboard navigation state
-		let selectedIndex = -1;
-		let searchTimeout: NodeJS.Timeout | null = null;
+		if (results.length === 0) {
+			resultsContainer.createEl('div', { 
+				text: 'No matching notes found', 
+				cls: 'crystal-search-status empty' 
+			});
+			return;
+		}
 
-		// Enhanced search functionality
-		const performSearch = async (searchTerm: string) => {
-			// Clear previous timeout
-			if (searchTimeout) {
-				clearTimeout(searchTimeout);
-			}
+		const resultsEl = resultsContainer.createEl('div', { cls: 'crystal-simple-search-results' });
 
-			// Update UI state
-			clearBtn.style.display = searchTerm ? 'block' : 'none';
-			searchIcon.textContent = searchTerm ? '⏳' : '🔍';
-			selectedIndex = -1;
-
-			// Clear results
-			const existingResults = resultsContainer.querySelector('.crystal-search-results');
-			if (existingResults) {
-				existingResults.remove();
-			}
-
-			if (!searchTerm.trim()) {
-				// Show recently modified notes when no search term
-				this.showRecentNotes(resultsContainer, searchStatus);
-				return;
-			}
-
-			// Show searching state
-			searchStatus.textContent = 'Searching...';
-			searchStatus.className = 'crystal-search-status searching';
-
-			// Debounce search
-			searchTimeout = setTimeout(async () => {
-				try {
-					const results = await this.performEnhancedSearch(searchTerm);
-					this.displaySearchResults(results, resultsContainer, searchStatus, searchInput);
-					searchIcon.textContent = '🔍';
-				} catch (error) {
-					console.error('Search error:', error);
-					searchStatus.textContent = 'Search failed. Please try again.';
-					searchStatus.className = 'crystal-search-status error';
-					searchIcon.textContent = '⚠️';
-				}
-			}, 300);
-		};
-
-		// Event listeners
-		searchInput.addEventListener('input', (e) => {
-			const target = e.target as HTMLInputElement;
-			performSearch(target.value);
-		});
-
-		searchInput.addEventListener('focus', () => {
-			if (!searchInput.value.trim()) {
-				this.showRecentNotes(resultsContainer, searchStatus);
-			}
-		});
-
-		// Clear button functionality
-		clearBtn.addEventListener('click', () => {
-			searchInput.value = '';
-			searchInput.focus();
-			performSearch('');
-		});
-
-		// Keyboard navigation
-		searchInput.addEventListener('keydown', (e) => {
-			const results = resultsContainer.querySelectorAll('.crystal-search-result');
+		results.slice(0, 6).forEach((file, index) => {
+			const resultEl = resultsEl.createEl('div', { cls: 'crystal-simple-search-result' });
 			
-			switch (e.key) {
-				case 'ArrowDown':
-					e.preventDefault();
-					selectedIndex = Math.min(selectedIndex + 1, results.length - 1);
-					this.updateSelection(results, selectedIndex);
-					break;
-				case 'ArrowUp':
-					e.preventDefault();
-					selectedIndex = Math.max(selectedIndex - 1, -1);
-					this.updateSelection(results, selectedIndex);
-					break;
-				case 'Enter':
-					e.preventDefault();
-					if (selectedIndex >= 0 && results[selectedIndex]) {
-						(results[selectedIndex] as HTMLElement).click();
-					}
-					break;
-				case 'Escape':
-					e.preventDefault();
-					searchInput.blur();
-					const existingResults = resultsContainer.querySelector('.crystal-search-results');
-					if (existingResults) {
-						existingResults.remove();
-					}
-					searchStatus.textContent = '';
-					break;
+			const titleEl = resultEl.createEl('div', { 
+				cls: 'crystal-simple-result-title',
+				text: file.basename 
+			});
+			
+			const pathEl = resultEl.createEl('div', { 
+				cls: 'crystal-simple-result-path',
+				text: file.path 
+			});
+			
+			resultEl.addEventListener('click', () => {
+				this.addSimpleNoteLink(file, section);
+			});
+
+			// Store index for keyboard navigation
+			(resultEl as any).resultIndex = index;
+		});
+	}
+
+	/**
+	 * Add note link with simplified interface
+	 */
+	private addSimpleNoteLink(file: any, section: HTMLElement): void {
+		if (!this.cardNoteLinks.includes(file.path)) {
+			this.cardNoteLinks.push(file.path);
+			
+			// Update notes display
+			const notesDisplay = section.querySelector('.crystal-notes-display') as HTMLElement;
+			if (notesDisplay) {
+				this.updateNotesDisplay(notesDisplay);
+			}
+			
+			// Clear search
+			const searchInput = section.querySelector('.crystal-notes-search-input') as HTMLInputElement;
+			if (searchInput) {
+				searchInput.value = '';
+			}
+			
+			// Hide results
+			const resultsContainer = (section as any).searchResultsContainer as HTMLElement;
+			resultsContainer.style.display = 'none';
+			resultsContainer.empty();
+		}
+	}
+
+	/**
+	 * Handle keyboard navigation in search
+	 */
+	private handleSearchKeydown(e: KeyboardEvent, section: HTMLElement): void {
+		const resultsContainer = (section as any).searchResultsContainer as HTMLElement;
+		const results = resultsContainer.querySelectorAll('.crystal-simple-search-result');
+		
+		if (results.length === 0) return;
+
+		let selectedIndex = (section as any).selectedIndex;
+
+		switch (e.key) {
+			case 'ArrowDown':
+				e.preventDefault();
+				selectedIndex = Math.min(selectedIndex + 1, results.length - 1);
+				break;
+			case 'ArrowUp':
+				e.preventDefault();
+				selectedIndex = Math.max(selectedIndex - 1, -1);
+				break;
+			case 'Enter':
+				e.preventDefault();
+				if (selectedIndex >= 0 && results[selectedIndex]) {
+					(results[selectedIndex] as HTMLElement).click();
+				}
+				return;
+			case 'Escape':
+				e.preventDefault();
+				resultsContainer.style.display = 'none';
+				resultsContainer.empty();
+				selectedIndex = -1;
+				break;
+			default:
+				return;
+		}
+
+		// Update selection visual state
+		results.forEach((result, index) => {
+			if (index === selectedIndex) {
+				result.addClass('selected');
+			} else {
+				result.removeClass('selected');
 			}
 		});
 
-		// Initial state - show recent notes
-		this.showRecentNotes(resultsContainer, searchStatus);
+		(section as any).selectedIndex = selectedIndex;
 	}
 
 	private updateNotesDisplay(container: HTMLElement): void {
+		console.log('Updating notes display, cardNoteLinks count:', this.cardNoteLinks.length);
 		container.empty();
 		
 		if (this.cardNoteLinks.length === 0) {
@@ -503,6 +632,8 @@ You can include:
 
 		this.cardNoteLinks.forEach((notePath, index) => {
 			const file = this.app.vault.getAbstractFileByPath(notePath);
+			console.log(`Processing note ${index + 1}:`, notePath, 'File found:', !!file);
+			
 			if (file instanceof TFile) {
 				const noteEl = container.createEl('div', { cls: 'crystal-linked-note' });
 				
@@ -523,10 +654,110 @@ You can include:
 					cls: 'crystal-note-remove'
 				});
 				removeBtn.onclick = () => {
-					this.cardNoteLinks.splice(index, 1);
-					this.updateNotesDisplay(container);
+					this.deleteLinkedNote(file, container);
 				};
+			} else {
+				console.warn('File not found for path:', notePath);
 			}
+		});
+		
+		console.log('Notes display updated successfully');
+	}
+
+	/**
+	 * Delete a linked note with user confirmation
+	 */
+	private async deleteLinkedNote(file: TFile, container: HTMLElement): Promise<void> {
+		try {
+			const confirmed = await this.confirmNoteDeletion(file.basename);
+			if (!confirmed) {
+				return;
+			}
+
+			console.log('Deleting linked note:', file.path);
+
+			// Remove from cardNoteLinks
+			const index = this.cardNoteLinks.indexOf(file.path);
+			if (index > -1) {
+				this.cardNoteLinks.splice(index, 1);
+			}
+
+			// Delete the actual file
+			await this.app.vault.delete(file);
+			
+			// Update the display
+			this.updateNotesDisplay(container);
+			
+			new Notice(`🗑️ Deleted note: ${file.basename}`);
+			console.log('Note deleted successfully:', file.path);
+
+		} catch (error) {
+			console.error('Error deleting linked note:', error);
+			new Notice(`❌ Failed to delete note: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Show confirmation dialog for note deletion
+	 */
+	private async confirmNoteDeletion(noteName: string): Promise<boolean> {
+		return new Promise((resolve) => {
+			const modal = new Modal(this.app);
+			modal.titleEl.setText('Delete Note');
+
+			const content = modal.contentEl;
+			content.createEl('p', { 
+				text: `Are you sure you want to permanently delete "${noteName}"?`
+			});
+			
+			content.createEl('p', { 
+				text: 'This action cannot be undone.',
+				cls: 'mod-warning'
+			});
+
+			const buttonContainer = content.createEl('div');
+			buttonContainer.style.display = 'flex';
+			buttonContainer.style.gap = '0.5rem';
+			buttonContainer.style.justifyContent = 'flex-end';
+			buttonContainer.style.marginTop = '1rem';
+
+			const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+			const deleteBtn = buttonContainer.createEl('button', { 
+				text: 'Delete',
+				cls: 'mod-warning'
+			});
+
+			let isResolved = false;
+
+			const handleCancel = () => {
+				if (isResolved) return;
+				isResolved = true;
+				resolve(false);
+				setTimeout(() => modal.close(), 10);
+			};
+
+			const handleDelete = () => {
+				if (isResolved) return;
+				isResolved = true;
+				resolve(true);
+				setTimeout(() => modal.close(), 10);
+			};
+
+			cancelBtn.addEventListener('click', handleCancel);
+			deleteBtn.addEventListener('click', handleDelete);
+			
+			// Handle modal close via other means
+			modal.onClose = () => {
+				if (!isResolved) {
+					isResolved = true;
+					resolve(false);
+				}
+			};
+
+			modal.open();
+			
+			// Focus the cancel button by default for safety
+			setTimeout(() => cancelBtn.focus(), 100);
 		});
 	}
 
@@ -651,66 +882,7 @@ You can include:
 		});
 	}
 
-	private showRecentNotes(container: HTMLElement, statusEl: HTMLElement): void {
-		// Remove existing results
-		const existingResults = container.querySelector('.crystal-search-results');
-		if (existingResults) {
-			existingResults.remove();
-		}
 
-		// Get recently modified notes
-		const recentNotes = this.allMarkdownFiles
-			.filter(file => !this.cardNoteLinks.includes(file.path))
-			.sort((a, b) => b.stat.mtime - a.stat.mtime)
-			.slice(0, 6);
-
-		if (recentNotes.length === 0) {
-			statusEl.textContent = 'No notes available to link.';
-			statusEl.className = 'crystal-search-status empty';
-			return;
-		}
-
-		statusEl.textContent = 'Recently modified notes - or start typing to search';
-		statusEl.className = 'crystal-search-status recent';
-
-		const resultsEl = container.createEl('div', { cls: 'crystal-search-results recent-notes' });
-
-		recentNotes.forEach(file => {
-			const resultEl = resultsEl.createEl('div', { cls: 'crystal-search-result recent-note' });
-			
-			const headerEl = resultEl.createEl('div', { cls: 'crystal-result-header' });
-			
-			const iconEl = headerEl.createEl('span', { cls: 'crystal-result-icon' });
-			iconEl.textContent = this.getNoteIcon(file);
-			
-			const titleEl = headerEl.createEl('span', { 
-				cls: 'crystal-result-title',
-				text: file.basename 
-			});
-
-			const recentEl = headerEl.createEl('span', { 
-				cls: 'crystal-recent-indicator',
-				text: '🕒 Recent'
-			});
-			
-			const pathEl = resultEl.createEl('div', { 
-				cls: 'crystal-result-path',
-				text: file.path 
-			});
-
-			const metaEl = resultEl.createEl('div', { cls: 'crystal-result-metadata' });
-			const lastModified = new Date(file.stat.mtime);
-			metaEl.createEl('span', { 
-				cls: 'crystal-result-date',
-				text: `Modified: ${this.formatDate(lastModified)}`
-			});
-			
-			resultEl.addEventListener('click', () => {
-				const searchInput = container.closest('.crystal-note-search-container')?.querySelector('.crystal-search-input') as HTMLInputElement;
-				this.addNoteLink(file, container, searchInput);
-			});
-		});
-	}
 
 	private addNoteLink(file: any, container: HTMLElement, searchInput: HTMLInputElement): void {
 		if (!this.cardNoteLinks.includes(file.path)) {
@@ -733,11 +905,357 @@ You can include:
 			// Show recent notes again
 			const statusEl = resultsContainer?.querySelector('.crystal-search-status') as HTMLElement;
 			if (statusEl && resultsContainer) {
-				this.showRecentNotes(resultsContainer, statusEl);
+				statusEl.textContent = 'Start typing to search for notes to link';
+				statusEl.className = 'crystal-search-status empty';
 			}
 
 			// Focus back to search for easy addition of more notes
 			setTimeout(() => searchInput.focus(), 100);
+		}
+	}
+
+	/**
+	 * Create a new linked note with user-provided title
+	 */
+	private async createLinkedNote(): Promise<void> {
+		try {
+			console.log('Creating linked note...');
+			
+			// Get the board to determine folder structure
+			const board = this.plugin.dataManager.getBoardById(this.boardId);
+			if (!board) {
+				new Notice('❌ Could not find board information');
+				console.error('Board not found for ID:', this.boardId);
+				return;
+			}
+			console.log('Board found:', board.name);
+
+			// Prompt user for note title using Obsidian's native modal
+			const title = await this.promptForTitle();
+			if (!title) {
+				console.log('User cancelled note creation');
+				return; // User cancelled
+			}
+			console.log('Note title entered:', title);
+
+			// Sanitize title for file system
+			const sanitizedTitle = this.sanitizeFileName(title);
+			const sanitizedCardTitle = this.sanitizeFileName(this.cardTitle);
+
+			// Create folder path: Kanban/BoardName/CardName/
+			const kanbanFolder = this.plugin.settings.kanbanFolderPath || 'Kanban';
+			const folderPath = `${kanbanFolder}/${board.name}/${sanitizedCardTitle}`;
+			console.log('Creating folder path:', folderPath);
+			
+			// Ensure folder exists
+			await this.ensureFolderExists(folderPath);
+
+			// Create note path
+			const notePath = `${folderPath}/${sanitizedTitle}.md`;
+			console.log('Creating note at path:', notePath);
+			
+			// Check if file already exists
+			if (this.app.vault.getAbstractFileByPath(notePath)) {
+				new Notice(`❌ A note named "${title}" already exists in this location`);
+				return;
+			}
+
+			// Create the note with basic content
+			const noteContent = this.generateNoteContent(title, board.name);
+			const file = await this.app.vault.create(notePath, noteContent);
+			console.log('Note created successfully:', file.path);
+
+			// Wait a moment for file system to sync
+			await new Promise(resolve => setTimeout(resolve, 100));
+
+			// Add to linked notes
+			this.cardNoteLinks.push(notePath);
+			console.log('Added to cardNoteLinks, new count:', this.cardNoteLinks.length);
+
+			// Update the notes display - find it within this modal's content
+			const modalContent = this.contentEl;
+			let notesDisplay = modalContent.querySelector('.crystal-notes-display') as HTMLElement;
+			
+			console.log('Notes display element found:', !!notesDisplay);
+			
+			if (notesDisplay) {
+				this.updateNotesDisplay(notesDisplay);
+				console.log('Notes display updated');
+			} else {
+				console.warn('Could not find notes display element, trying force refresh');
+				// Force a re-render of the entire notes section
+				this.forceNotesDisplayRefresh();
+			}
+
+			// Open the note in a new tab on the right and focus for immediate typing
+			await this.openNoteInRightPane(file);
+			await this.focusNoteEditor(file);
+
+			new Notice(`✅ Created and linked note: ${title}`);
+
+		} catch (error) {
+			console.error('Error creating linked note:', error);
+			new Notice(`❌ Failed to create note: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Force refresh of the notes display when DOM selector fails
+	 */
+	private forceNotesDisplayRefresh(): void {
+		try {
+			// Search within this modal's content
+			const modalContent = this.contentEl;
+			
+			// Look for the h3 with "Linked Notes" text
+			const notesSectionHeaders = modalContent.querySelectorAll('.crystal-section-title');
+			for (const header of notesSectionHeaders) {
+				if (header.textContent?.includes('Linked Notes')) {
+					const section = header.closest('.crystal-card-section');
+					if (section) {
+						const notesDisplay = section.querySelector('.crystal-notes-display');
+						if (notesDisplay) {
+							this.updateNotesDisplay(notesDisplay as HTMLElement);
+							console.log('Force refresh: Notes display updated via section search');
+							return;
+						}
+					}
+				}
+			}
+			
+			// Fallback: try to find any notes display within the modal
+			const notesDisplay = modalContent.querySelector('.crystal-notes-display');
+			if (notesDisplay) {
+				this.updateNotesDisplay(notesDisplay as HTMLElement);
+				console.log('Force refresh: Notes display updated via fallback search');
+				return;
+			}
+			
+			console.warn('Force refresh failed: Could not find notes section to update');
+		} catch (error) {
+			console.error('Error in force notes display refresh:', error);
+		}
+	}
+
+	/**
+	 * Prompt user for note title using Obsidian's native prompt
+	 */
+	private async promptForTitle(): Promise<string | null> {
+		return new Promise((resolve) => {
+			const modal = new Modal(this.app);
+			modal.titleEl.setText('Create Linked Note');
+
+			const content = modal.contentEl;
+			content.createEl('p', { text: 'Enter a title for the new note:' });
+
+			const input = content.createEl('input', {
+				type: 'text',
+				placeholder: 'Note title...'
+			});
+			input.style.width = '100%';
+			input.style.marginBottom = '1rem';
+
+			// Error message placeholder
+			const errorMsg = content.createEl('div', {
+				cls: 'mod-warning',
+				text: ''
+			});
+			errorMsg.style.display = 'none';
+			errorMsg.style.marginBottom = '0.5rem';
+			errorMsg.style.fontSize = '0.9rem';
+
+			const buttonContainer = content.createEl('div');
+			buttonContainer.style.display = 'flex';
+			buttonContainer.style.gap = '0.5rem';
+			buttonContainer.style.justifyContent = 'flex-end';
+
+			const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+			const createBtn = buttonContainer.createEl('button', { 
+				text: 'Create',
+				cls: 'mod-cta'
+			});
+
+			const showError = (message: string) => {
+				errorMsg.textContent = message;
+				errorMsg.style.display = 'block';
+				setTimeout(() => {
+					errorMsg.style.display = 'none';
+				}, 3000);
+			};
+
+			let isResolved = false;
+
+			const handleSubmit = () => {
+				if (isResolved) return;
+				
+				const title = input.value.trim();
+				if (!title) {
+					showError('Please enter a note title');
+					input.focus();
+					return;
+				}
+				
+				console.log('Modal submit with title:', title);
+				
+				// Mark as resolved and resolve with title BEFORE closing modal
+				isResolved = true;
+				resolve(title);
+				
+				// Close modal after resolving
+				setTimeout(() => {
+					modal.close();
+				}, 10);
+			};
+
+			const handleCancel = () => {
+				if (isResolved) return;
+				
+				console.log('Modal cancelled');
+				
+				// Mark as resolved and resolve with null BEFORE closing modal
+				isResolved = true;
+				resolve(null);
+				
+				// Close modal after resolving
+				setTimeout(() => {
+					modal.close();
+				}, 10);
+			};
+
+			// Event listeners
+			cancelBtn.addEventListener('click', handleCancel);
+			createBtn.addEventListener('click', handleSubmit);
+			
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					handleSubmit();
+				} else if (e.key === 'Escape') {
+					e.preventDefault();
+					handleCancel();
+				}
+			});
+
+			// Handle modal close via other means (X button, outside click, etc.)
+			modal.onClose = () => {
+				if (!isResolved) {
+					console.log('Modal closed via onClose handler');
+					isResolved = true;
+					resolve(null);
+				}
+			};
+
+			modal.open();
+			setTimeout(() => input.focus(), 100);
+		});
+	}
+
+	/**
+	 * Sanitize filename for file system compatibility
+	 */
+	private sanitizeFileName(name: string): string {
+		return name
+			.replace(/[<>:"/\\|?*]/g, '') // Remove invalid characters
+			.replace(/\s+/g, ' ') // Replace multiple spaces with single space
+			.trim()
+			.substring(0, 100); // Limit length
+	}
+
+	/**
+	 * Ensure folder exists, creating it if necessary
+	 */
+	private async ensureFolderExists(path: string): Promise<void> {
+		const exists = await this.app.vault.adapter.exists(path);
+		if (!exists) {
+			await this.app.vault.createFolder(path);
+		}
+	}
+
+	/**
+	 * Generate initial content for the new note
+	 */
+	private generateNoteContent(title: string, boardName: string): string {
+		const now = new Date().toISOString().split('T')[0];
+		return `# ${title}
+
+**Created:** ${now}  
+**Board:** [[${boardName}]]  
+**Card:** [[${this.cardTitle}]]
+
+---
+
+## Notes
+
+
+`;
+	}
+
+	/**
+	 * Open the note in the right pane
+	 */
+	private async openNoteInRightPane(file: any): Promise<void> {
+		try {
+			// Get the current active leaf in the main editor area
+			const activeLeaf = this.app.workspace.activeLeaf;
+			
+			if (activeLeaf) {
+				console.log('Splitting main editor to the right');
+				// Split the current leaf vertically (creates right pane in main editor)
+				const newLeaf = this.app.workspace.createLeafBySplit(activeLeaf, 'vertical');
+				await newLeaf.openFile(file);
+				this.app.workspace.setActiveLeaf(newLeaf);
+				console.log('Note opened in right split of main editor');
+				return;
+			}
+
+			// Fallback: create new leaf in main workspace
+			console.log('Fallback: creating new leaf in main workspace');
+			const newLeaf = this.app.workspace.getLeaf(true);
+			await newLeaf.openFile(file);
+			this.app.workspace.setActiveLeaf(newLeaf);
+
+		} catch (error) {
+			console.error('Error opening note in right split:', error);
+			
+			// Ultimate fallback
+			const leaf = this.app.workspace.getLeaf(true);
+			await leaf.openFile(file);
+			this.app.workspace.setActiveLeaf(leaf);
+		}
+	}
+
+	/**
+	 * Focus the editor for immediate typing
+	 */
+	private async focusNoteEditor(file: any): Promise<void> {
+		try {
+			// Wait a moment for the view to fully load
+			await new Promise(resolve => setTimeout(resolve, 200));
+
+			// Find the markdown view for this file
+			const leaves = this.app.workspace.getLeavesOfType('markdown');
+			const targetLeaf = leaves.find(leaf => {
+				const view = leaf.view as any;
+				return view && view.file && view.file.path === file.path;
+			});
+
+			if (targetLeaf && targetLeaf.view) {
+				const markdownView = targetLeaf.view as any;
+				
+				// Focus the editor
+				if (markdownView.editor && markdownView.editor.focus) {
+					markdownView.editor.focus();
+					
+					// Position cursor at the end of the document for immediate typing
+					const lastLine = markdownView.editor.lastLine();
+					const lastLineLength = markdownView.editor.getLine(lastLine).length;
+					markdownView.editor.setCursor(lastLine, lastLineLength);
+					
+					console.log('Editor focused and cursor positioned');
+				}
+			}
+		} catch (error) {
+			console.error('Error focusing editor:', error);
 		}
 	}
 

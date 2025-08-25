@@ -1227,6 +1227,127 @@
 	font-style: italic;
 }
 
+/* Create Linked Note Button */
+.crystal-create-note-container {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 1rem;
+}
+
+.crystal-create-note-btn {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 8px;
+	padding: 0.75rem 1.5rem;
+	font-size: 0.95rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 160px;
+	justify-content: center;
+}
+
+.crystal-create-note-btn:hover {
+	background: var(--interactive-accent-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(var(--interactive-accent-rgb), 0.3);
+}
+
+.crystal-create-note-btn:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 6px rgba(var(--interactive-accent-rgb), 0.3);
+}
+
+/* Simplified Notes Search Results */
+.crystal-notes-search-results {
+	margin-top: 0.5rem;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.crystal-simple-search-results {
+	padding: 0;
+}
+
+.crystal-simple-search-result {
+	padding: 0.75rem 1rem;
+	cursor: pointer;
+	border-bottom: 1px solid var(--background-modifier-border);
+	transition: all 0.2s ease;
+}
+
+.crystal-simple-search-result:last-child {
+	border-bottom: none;
+}
+
+.crystal-simple-search-result:hover,
+.crystal-simple-search-result.selected {
+	background: var(--background-modifier-hover);
+}
+
+.crystal-simple-result-title {
+	font-weight: 500;
+	color: var(--text-normal);
+	margin-bottom: 0.25rem;
+}
+
+.crystal-simple-result-path {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	font-family: var(--font-monospace);
+}
+
+.crystal-search-status {
+	padding: 1rem;
+	text-align: center;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.crystal-search-status.searching {
+	color: var(--text-accent);
+}
+
+.crystal-search-status.error {
+	color: var(--text-error);
+}
+
+/* Delete Note Confirmation Modal */
+.mod-warning {
+	color: var(--text-error) !important;
+	border-color: var(--text-error) !important;
+}
+
+.mod-warning:hover {
+	background-color: var(--text-error) !important;
+	color: var(--text-on-accent) !important;
+}
+
+/* Ensure delete button shows text properly */
+button.mod-warning {
+	color: var(--text-error) !important;
+	border: 1px solid var(--text-error) !important;
+	background-color: transparent !important;
+	padding: 0.5rem 1rem !important;
+	border-radius: 4px !important;
+	cursor: pointer !important;
+	font-weight: 500 !important;
+	min-width: 80px !important;
+	font-size: 0.9rem !important;
+}
+
+button.mod-warning:hover {
+	background-color: var(--text-error) !important;
+	color: var(--text-on-accent) !important;
+}
+
 .crystal-search-input-container {
 	position: relative;
 	display: flex;
