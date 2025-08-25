@@ -1,6 +1,6 @@
-import { App, Modal, Setting, TFile, MarkdownRenderer, Component } from 'obsidian';
+import { App, Modal, Setting, TFile, MarkdownRenderer, Component, Notice } from 'obsidian';
 import CrystalBoardsPlugin from './main';
-import { Card, TodoItem, ResearchUrl } from './types';
+import { Card, TodoItem, ResearchUrl, DetectedUrl, AISummary } from './types';
 import { LinkManager } from './link-manager';
 import { LinkPreviewManager } from './link-preview';
 
@@ -862,9 +862,454 @@ You can include:
 		});
 		addBtn.onclick = () => this.addNewTodo(section);
 
+		// Add sample todo button for testing AI features
+		const sampleBtn = titleContainer.createEl('button', {
+			text: '🧪 Test AI Todo',
+			cls: 'crystal-add-btn crystal-sample-btn'
+		});
+		sampleBtn.onclick = () => this.addSampleTodo(section);
+		sampleBtn.style.marginLeft = '0.5rem';
+		sampleBtn.style.fontSize = '0.8rem';
+		sampleBtn.style.padding = '0.3rem 0.6rem';
+
 		// Todos display
 		const todosDisplay = section.createEl('div', { cls: 'crystal-todos-display' });
 		this.updateTodosDisplay(todosDisplay);
+	}
+
+	/**
+	 * Render the Research URLs section
+	 */
+	private renderResearchSection(container: HTMLElement): void {
+		// Section header
+		const headerEl = container.createEl('div', { cls: 'crystal-section-header' });
+		const titleEl = headerEl.createEl('h3', { text: '🔗 Research URLs', cls: 'crystal-section-title' });
+		
+		// Add URL button
+		const addUrlBtn = headerEl.createEl('button', {
+			text: '+ Add URL',
+			cls: 'crystal-add-url-btn'
+		});
+		addUrlBtn.onclick = () => this.addNewResearchUrl(container);
+
+		// URLs display container
+		const urlsContainer = container.createEl('div', { cls: 'crystal-urls-container' });
+		this.updateUrlsDisplay(urlsContainer);
+	}
+
+	/**
+	 * Update the URLs display
+	 */
+	private updateUrlsDisplay(container: HTMLElement): void {
+		container.empty();
+
+		if (this.cardResearchUrls.length === 0) {
+			const emptyState = container.createEl('div', {
+				text: 'No research URLs added yet. Click "Add URL" to add research links.',
+				cls: 'crystal-empty-state'
+			});
+			return;
+		}
+
+		// Display each URL
+		this.cardResearchUrls.forEach((url, index) => {
+			this.renderResearchUrl(container, url, index);
+		});
+	}
+
+	/**
+	 * Render a single research URL
+	 */
+	private renderResearchUrl(container: HTMLElement, url: ResearchUrl, index: number): void {
+		const urlEl = container.createEl('div', { 
+			cls: 'crystal-url-item',
+			attr: { 'data-url-index': index.toString() }
+		});
+
+		// URL info section
+		const infoEl = urlEl.createEl('div', { cls: 'crystal-url-info' });
+		
+		// Header with favicon and title
+		const headerEl = infoEl.createEl('div', { cls: 'crystal-url-header' });
+		
+		// Favicon
+		if (url.url && url.url.trim()) {
+			try {
+				const faviconEl = headerEl.createEl('img', {
+					cls: 'crystal-url-favicon',
+					attr: {
+						'src': `https://www.google.com/s2/favicons?domain=${new URL(url.url).hostname}&sz=16`,
+						'alt': 'Site favicon',
+						'width': '16',
+						'height': '16'
+					}
+				});
+				faviconEl.onerror = () => {
+					// Fallback to a generic link icon if favicon fails to load
+					faviconEl.style.display = 'none';
+					const fallbackIcon = headerEl.createEl('span', { 
+						text: '🔗', 
+						cls: 'crystal-url-fallback-icon' 
+					});
+					headerEl.insertBefore(fallbackIcon, faviconEl.nextSibling);
+				};
+			} catch (e) {
+				// Invalid URL, show fallback icon
+				headerEl.createEl('span', { 
+					text: '🔗', 
+					cls: 'crystal-url-fallback-icon' 
+				});
+			}
+		}
+
+		// Title (editable) - will be auto-populated with actual page title
+		const titleInput = headerEl.createEl('input', {
+			type: 'text',
+			cls: 'crystal-url-title',
+			value: url.title || '',
+			placeholder: 'Loading title...'
+		});
+		titleInput.onchange = () => {
+			this.cardResearchUrls[index].title = titleInput.value;
+		};
+
+		// AI Summary field (auto-populated)
+		const summaryEl = infoEl.createEl('div', { cls: 'crystal-url-summary' });
+		const summaryText = summaryEl.createEl('div', {
+			text: url.description || 'Loading summary...',
+			cls: 'crystal-url-summary-text'
+		});
+
+		// Auto-enhance URL info if we have a URL but missing title/summary
+		if (url.url && url.url.trim() && (!url.title || !url.description || url.description === '🔗 Reference link for research')) {
+			this.enhanceUrlInfo(index);
+		}
+
+		// Actions section
+		const actionsEl = urlEl.createEl('div', { cls: 'crystal-url-actions' });
+
+		// Open URL button
+		if (url.url && url.url.trim()) {
+			const openBtn = actionsEl.createEl('button', {
+				text: '🔗 Open',
+				cls: 'crystal-open-url-btn',
+				attr: { 'aria-label': 'Open URL in browser' }
+			});
+			openBtn.onclick = () => {
+				window.open(url.url, '_blank');
+			};
+
+			// Add hover preview
+			this.linkPreviewManager.addHoverPreview(openBtn, url.url);
+		}
+
+		// Add link status controls
+		this.addLinkStatusControls(urlEl, url, index);
+		
+		const removeBtn = actionsEl.createEl('button', {
+			text: '×',
+			cls: 'crystal-url-remove'
+		});
+		removeBtn.onclick = () => {
+			this.cardResearchUrls.splice(index, 1);
+			const urlsContainer = container.closest('.crystal-urls-container') as HTMLElement;
+			this.updateUrlsDisplay(urlsContainer);
+		};
+	}
+
+	/**
+	 * Add link status controls (importance, read/unread)
+	 */
+	private addLinkStatusControls(urlEl: HTMLElement, url: ResearchUrl, index: number): void {
+		const statusEl = urlEl.createEl('div', { cls: 'crystal-url-status' });
+
+		// Importance selector
+		const importanceSelect = statusEl.createEl('select', { cls: 'crystal-url-importance' });
+		const importanceOptions = [
+			{ value: 'low', text: '🟢 Low', color: '#28a745' },
+			{ value: 'medium', text: '🟡 Medium', color: '#ffc107' },
+			{ value: 'high', text: '🔴 High', color: '#dc3545' }
+		];
+
+		importanceOptions.forEach(option => {
+			const optionEl = importanceSelect.createEl('option', {
+				value: option.value,
+				text: option.text
+			});
+			if (url.importance === option.value) {
+				optionEl.selected = true;
+			}
+		});
+
+		importanceSelect.onchange = () => {
+			this.cardResearchUrls[index].importance = importanceSelect.value as 'low' | 'medium' | 'high';
+		};
+
+		// Read/Unread toggle
+		const readToggle = statusEl.createEl('button', {
+			text: url.status === 'read' ? '👁️ Read' : '📖 Unread',
+			cls: `crystal-url-read-toggle ${url.status === 'read' ? 'read' : 'unread'}`
+		});
+		readToggle.onclick = () => {
+			const newStatus = url.status === 'read' ? 'unread' : 'read';
+			this.cardResearchUrls[index].status = newStatus;
+			readToggle.textContent = newStatus === 'read' ? '👁️ Read' : '📖 Unread';
+			readToggle.className = `crystal-url-read-toggle ${newStatus}`;
+		};
+	}
+
+	/**
+	 * Add a new research URL
+	 */
+	private addNewResearchUrl(container: HTMLElement): void {
+		const newUrl: ResearchUrl = {
+			id: `url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			url: '',
+			title: '',
+			description: '',
+			created: Date.now(),
+			status: 'unread',
+			importance: 'medium'
+		};
+
+		this.cardResearchUrls.push(newUrl);
+		const urlsContainer = container.querySelector('.crystal-urls-container') as HTMLElement;
+		this.updateUrlsDisplay(urlsContainer);
+
+		// Focus on the new URL input
+		setTimeout(() => {
+			const newIndex = this.cardResearchUrls.length - 1;
+			const newUrlEl = urlsContainer.querySelector(`[data-url-index="${newIndex}"]`) as HTMLElement;
+			if (newUrlEl) {
+				const urlInput = newUrlEl.querySelector('.crystal-url-input') as HTMLInputElement;
+				if (urlInput) {
+					// Show the input for editing immediately for new URLs
+					const urlText = newUrlEl.querySelector('.crystal-url-text') as HTMLElement;
+					const editBtn = newUrlEl.querySelector('.crystal-url-edit-btn') as HTMLElement;
+					if (urlText && editBtn) {
+						urlInput.classList.remove('crystal-url-input-hidden');
+						urlText.style.display = 'none';
+						editBtn.textContent = '💾';
+						urlInput.focus();
+					}
+				}
+			}
+		}, 100);
+	}
+
+	/**
+	 * Enhance URL info by fetching title and generating AI summary
+	 */
+	private async enhanceUrlInfo(index: number, force: boolean = false): Promise<void> {
+		const url = this.cardResearchUrls[index];
+		if (!url.url || !url.url.trim()) return;
+
+		try {
+			// Show loading state
+			const urlItem = document.querySelector(`[data-url-index="${index}"]`) as HTMLElement;
+			if (!urlItem) return;
+
+			const titleInput = urlItem.querySelector('.crystal-url-title') as HTMLInputElement;
+			const summaryText = urlItem.querySelector('.crystal-url-summary-text') as HTMLElement;
+
+			// Only fetch if we don't have title/summary or if forced
+			const needsTitle = force || !url.title || url.title.trim() === '' || url.title === 'freecodecamp.org';
+			const needsSummary = force || !url.description || url.description.trim() === '' || url.description === '🔗 Reference link for research';
+
+			if (!needsTitle && !needsSummary) return;
+
+			if (needsTitle) {
+				if (titleInput) titleInput.placeholder = 'Loading title...';
+			}
+			
+			if (needsSummary) {
+				if (summaryText) summaryText.textContent = 'Loading summary...';
+			}
+
+			// Extract title from URL path first (immediate feedback)
+			let title = '';
+			if (needsTitle) {
+				title = this.extractTitleFromUrl(url.url);
+				if (title && titleInput) {
+					titleInput.value = title;
+					this.cardResearchUrls[index].title = title;
+				}
+			}
+
+			// Get summary using the same pipeline as smart extraction
+			if (needsSummary) {
+				try {
+					console.log('Starting URL content extraction for:', url.url);
+					const smartExtractService = this.plugin.smartExtractService;
+					const openAIService = this.plugin.openAIService;
+					
+					// Step 1: Try MCP scraping first (same as smart extract)
+					let content = await smartExtractService.tryMCPScraping(url.url);
+					
+					if (content && content.trim()) {
+						console.log(`MCP scraping successful, extracted ${content.length} characters`);
+						
+						// Step 2: Use OpenAI to summarize the content
+						const summary = await openAIService.summarizeURL(url.url, content);
+						
+						if (summary && summary.trim()) {
+							// Keep summary short (max 150 chars)
+							let finalSummary = summary;
+							if (finalSummary.length > 150) {
+								finalSummary = finalSummary.substring(0, 147) + '...';
+							}
+							
+							this.cardResearchUrls[index].description = finalSummary;
+							if (summaryText) {
+								summaryText.textContent = finalSummary;
+							}
+							console.log('Summary generated successfully:', finalSummary);
+						} else {
+							const fallbackSummary = 'Summary could not be generated from URL content.';
+							this.cardResearchUrls[index].description = fallbackSummary;
+							if (summaryText) {
+								summaryText.textContent = fallbackSummary;
+							}
+						}
+					} else {
+						console.log('MCP scraping failed, trying direct fetch...');
+						
+						// Step 3: Fallback to direct URL fetch (same as smart extract fallback)
+						try {
+							const response = await fetch(url.url, {
+								headers: {
+									'User-Agent': 'Crystal Boards Research'
+								}
+							});
+							
+							if (response.ok) {
+								const html = await response.text();
+								
+								// Basic HTML text extraction
+								let textContent = html
+									.replace(/<script[^>]*>.*?<\/script>/gi, '')
+									.replace(/<style[^>]*>.*?<\/style>/gi, '')
+									.replace(/<[^>]*>/g, ' ')
+									.replace(/\s+/g, ' ')
+									.trim();
+								
+								// Limit content size
+								if (textContent.length > 3000) {
+									textContent = textContent.substring(0, 3000) + '...';
+								}
+								
+								if (textContent.length > 100) {
+									const summary = await openAIService.summarizeURL(url.url, textContent);
+									
+									if (summary && summary.trim()) {
+										let finalSummary = summary;
+										if (finalSummary.length > 150) {
+											finalSummary = finalSummary.substring(0, 147) + '...';
+										}
+										
+										this.cardResearchUrls[index].description = finalSummary;
+										if (summaryText) {
+											summaryText.textContent = finalSummary;
+										}
+									} else {
+										const fallbackSummary = 'Summary could not be generated.';
+										this.cardResearchUrls[index].description = fallbackSummary;
+										if (summaryText) {
+											summaryText.textContent = fallbackSummary;
+										}
+									}
+								} else {
+									const fallbackSummary = 'Insufficient content to generate summary.';
+									this.cardResearchUrls[index].description = fallbackSummary;
+									if (summaryText) {
+										summaryText.textContent = fallbackSummary;
+									}
+								}
+							} else {
+								throw new Error(`HTTP ${response.status}`);
+							}
+						} catch (fetchError) {
+							console.warn('Direct fetch also failed:', fetchError);
+							const errorSummary = 'Unable to access URL content for summary.';
+							this.cardResearchUrls[index].description = errorSummary;
+							if (summaryText) {
+								summaryText.textContent = errorSummary;
+							}
+						}
+					}
+				} catch (error) {
+					console.error('Failed to generate summary:', error);
+					const errorMessage = 'Error generating summary for this URL.';
+					this.cardResearchUrls[index].description = errorMessage;
+					if (summaryText) {
+						summaryText.textContent = errorMessage;
+					}
+				}
+			}
+
+		} catch (error) {
+			console.error('Error enhancing URL info:', error);
+		}
+	}
+
+	/**
+	 * Extract a readable title from URL path
+	 */
+	private extractTitleFromUrl(url: string): string {
+		try {
+			const urlObj = new URL(url);
+			const pathParts = urlObj.pathname.split('/').filter(p => p.length > 0);
+			
+			if (pathParts.length > 0) {
+				// Use the last meaningful path segment
+				const lastPart = pathParts[pathParts.length - 1];
+				
+				// Convert URL slug to readable title
+				let title = lastPart
+					.replace(/[-_]/g, ' ')                    // Replace dashes/underscores with spaces
+					.replace(/\.(html|htm|php|jsp|asp)$/i, '') // Remove file extensions
+					.replace(/\d{4}\/\d{2}\/\d{2}/g, '')      // Remove date patterns
+					.split(' ')
+					.filter(word => word.length > 0)         // Remove empty words
+					.map(word => {
+						// Capitalize each word appropriately
+						if (word.toLowerCase() === 'and') return 'and';
+						if (word.toLowerCase() === 'or') return 'or';
+						if (word.toLowerCase() === 'the') return 'the';
+						if (word.toLowerCase() === 'a') return 'a';
+						if (word.toLowerCase() === 'an') return 'an';
+						if (word.toLowerCase() === 'in') return 'in';
+						if (word.toLowerCase() === 'on') return 'on';
+						if (word.toLowerCase() === 'at') return 'at';
+						if (word.toLowerCase() === 'to') return 'to';
+						if (word.toLowerCase() === 'for') return 'for';
+						if (word.toLowerCase() === 'of') return 'of';
+						if (word.toLowerCase() === 'with') return 'with';
+						if (word.toLowerCase() === 'by') return 'by';
+						
+						return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+					})
+					.join(' ');
+
+				// Handle special cases like "what is linting and how can it save you time"
+				if (title.length > 50) {
+					title = title.substring(0, 50) + '...';
+				}
+				
+				// Make sure first letter is capitalized
+				if (title.length > 0) {
+					title = title.charAt(0).toUpperCase() + title.slice(1);
+				}
+
+				return title || urlObj.hostname.replace('www.', '');
+			} else {
+				// Fallback to hostname if no path
+				return urlObj.hostname.replace('www.', '');
+			}
+		} catch (error) {
+			console.warn('Error extracting title from URL:', error);
+			return 'Untitled';
+		}
 	}
 
 	private addNewTodo(section: HTMLElement): void {
@@ -890,6 +1335,29 @@ You can include:
 		}
 	}
 
+	private addSampleTodo(section: HTMLElement): void {
+		const todoId = this.generateId();
+		const sampleTodo: TodoItem = {
+			id: todoId,
+			text: 'Research this article: https://obsidian.md/blog/new-obsidian-icon/',
+			completed: false,
+			created: Date.now()
+		};
+		
+		this.cardTodos.push(sampleTodo);
+		this.updateTodosDisplay(section.querySelector('.crystal-todos-display') as HTMLElement);
+		
+		// Update progress bar
+		const progressContainer = this.contentEl.querySelector('.crystal-progress-container');
+		if (progressContainer) {
+			progressContainer.remove();
+		}
+		if (this.cardTodos.length > 0) {
+			const headerEl = this.contentEl.querySelector('.crystal-card-modal-header') as HTMLElement;
+			this.renderProgressBar(headerEl);
+		}
+	}
+
 	private updateTodosDisplay(container: HTMLElement): void {
 		container.empty();
 		
@@ -902,9 +1370,12 @@ You can include:
 		}
 
 		this.cardTodos.forEach((todo, index) => {
-			const todoEl = container.createEl('div', { cls: 'crystal-todo-item' });
+			const todoEl = container.createEl('div', { cls: 'crystal-todo-item crystal-todo-enhanced' });
 			
-			const checkbox = todoEl.createEl('input', {
+			// Main todo row
+			const todoMainRow = todoEl.createEl('div', { cls: 'crystal-todo-main-row' });
+			
+			const checkbox = todoMainRow.createEl('input', {
 				type: 'checkbox',
 				cls: 'crystal-todo-checkbox'
 			});
@@ -920,7 +1391,7 @@ You can include:
 				}
 			};
 			
-			const textInput = todoEl.createEl('input', {
+			const textInput = todoMainRow.createEl('input', {
 				type: 'text',
 				cls: 'crystal-todo-text',
 				value: todo.text,
@@ -928,6 +1399,8 @@ You can include:
 			});
 			textInput.onchange = () => {
 				this.cardTodos[index].text = textInput.value;
+				// Auto-detect URLs when text changes
+				this.detectUrlsInTodo(todo, index, todoEl);
 			};
 			
 			// Add Enter key support for todos
@@ -943,8 +1416,34 @@ You can include:
 					}
 				}
 			});
+
+			// Enhanced AI actions section
+			const actionsRow = todoMainRow.createEl('div', { cls: 'crystal-todo-actions' });
+
+			// Check if this todo has URLs
+			const hasUrls = this.hasUrlsInText(todo.text);
 			
-			const removeBtn = todoEl.createEl('button', {
+			// Show AI buttons if URLs are detected
+			if (hasUrls) {
+				// AI Summary button
+				const aiBtn = actionsRow.createEl('button', {
+					text: '🤖 AI',
+					cls: 'crystal-todo-ai-btn',
+					attr: { 'aria-label': 'Get AI Summary', 'title': 'Get AI Summary of URLs' }
+				});
+				aiBtn.onclick = () => this.handleAISummary(todo, index, todoEl);
+			} else if (todo.text.trim()) {
+				// Show helpful hint when todo has text but no URLs
+				const hintBtn = actionsRow.createEl('span', {
+					text: 'Add URL for AI features',
+					cls: 'crystal-todo-hint'
+				});
+				hintBtn.style.fontSize = '0.7rem';
+				hintBtn.style.color = 'var(--text-muted)';
+				hintBtn.style.fontStyle = 'italic';
+			}
+
+			const removeBtn = actionsRow.createEl('button', {
 				text: '×',
 				cls: 'crystal-todo-remove'
 			});
@@ -961,211 +1460,79 @@ You can include:
 					this.renderProgressBar(headerEl);
 				}
 			};
-		});
-	}
 
-	private renderResearchSection(container: HTMLElement): void {
-		const section = container.createEl('div', { cls: 'crystal-card-section' });
-		const titleContainer = section.createEl('div', { cls: 'crystal-section-title-container' });
-		titleContainer.createEl('h3', { text: 'Research & URLs', cls: 'crystal-section-title' });
-		
-		// Add URL button
-		const addBtn = titleContainer.createEl('button', {
-			text: '+ Add URL',
-			cls: 'crystal-add-btn'
-		});
-		addBtn.onclick = () => this.addNewResearchUrl(section);
+			// Show AI summary if available
+			if (todo.aiSummary) {
+				this.renderAISummary(todoEl, todo.aiSummary);
+			}
 
-		// URLs display
-		const urlsDisplay = section.createEl('div', { cls: 'crystal-urls-display' });
-		this.updateUrlsDisplay(urlsDisplay);
-	}
-
-	private addNewResearchUrl(section: HTMLElement): void {
-		const urlId = this.generateId();
-		const newUrl: ResearchUrl = {
-			id: urlId,
-			title: '',
-			url: '',
-			description: '',
-			created: Date.now()
-		};
-		
-		this.cardResearchUrls.push(newUrl);
-		this.updateUrlsDisplay(section.querySelector('.crystal-urls-display') as HTMLElement);
-	}
-
-	private updateUrlsDisplay(container: HTMLElement): void {
-	container.empty();
-	
-	if (this.cardResearchUrls.length === 0) {
-		container.createEl('div', { 
-			text: 'No research URLs added yet',
-			cls: 'crystal-empty-state'
-		});
-		return;
-	}
-
-	this.cardResearchUrls.forEach((url, index) => {
-		const urlEl = container.createEl('div', { cls: 'crystal-url-item' });
-		
-		// URL input with favicon
-		const urlRow = urlEl.createEl('div', { cls: 'crystal-url-row' });
-		
-		// Add favicon
-		const favicon = urlRow.createEl('img', {
-			cls: 'crystal-url-favicon',
-			attr: {
-				src: this.getFaviconUrl(url.url),
-				alt: 'Site icon',
-				width: '16',
-				height: '16'
+			// Show detected URLs
+			if (todo.urls && todo.urls.length > 0) {
+				this.renderDetectedUrls(todoEl, todo.urls);
 			}
 		});
-		
-		// Fallback for broken favicon images
-		favicon.onerror = () => {
-			favicon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNyIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS41IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUgOEgxMU04IDVWMTEiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+'; // Default globe icon
-		};
-		
-		const urlInput = urlRow.createEl('input', {
-			type: 'url',
-			cls: 'crystal-url-input',
-			value: url.url,
-			placeholder: 'https://...'
-		});
-		urlInput.onchange = async () => {
-			const newUrl = urlInput.value.trim();
-			this.cardResearchUrls[index].url = newUrl;
-			
-			// Update favicon when URL changes
-			favicon.src = this.getFaviconUrl(newUrl);
-			
-			// Auto-enhance URL if it looks like a valid URL and title is empty
-			if (newUrl && this.isValidUrl(newUrl) && !this.cardResearchUrls[index].title.trim()) {
-				try {
-					// Show loading state
-					titleInput.value = '⏳ Loading title...';
-					titleInput.disabled = true;
-					
-					// Enhance the URL
-					const metadata = await this.linkManager.enhanceUrl(newUrl);
-					
-					// Update title with enhanced data
-					this.cardResearchUrls[index].title = metadata.title;
-					
-					// If we have AI-generated summary, use it as a compact description
-					if (metadata.description) {
-						// Truncate to make it compact (max 100 chars)
-						const compactSummary = metadata.description.length > 100 
-							? metadata.description.substring(0, 97) + '...'
-							: metadata.description;
-						this.cardResearchUrls[index].description = compactSummary;
-						descTextarea.value = compactSummary;
-						descTextarea.placeholder = 'AI Summary: ' + compactSummary;
-					}
-					
-					// Update UI
-					titleInput.value = metadata.title;
-					titleInput.disabled = false;
-					
-					// Add category indicator
-					this.addCategoryIndicator(urlEl, metadata);
-					
-				} catch (error) {
-					console.warn('Failed to enhance URL:', error);
-					titleInput.value = '';
-					titleInput.disabled = false;
-				}
+	}
+
+	private hasUrlsInText(text: string): boolean {
+		const urlRegex = /https?:\/\/[^\s]+/gi;
+		return urlRegex.test(text);
+	}
+
+	private detectUrlsInTodo(todo: TodoItem, index: number, todoEl: HTMLElement): void {
+		if (!this.hasUrlsInText(todo.text)) {
+			// Remove any existing URL detection UI
+			const urlContainer = todoEl.querySelector('.crystal-todo-urls');
+			if (urlContainer) {
+				urlContainer.remove();
 			}
-		};
-		
-		const titleInput = urlEl.createEl('input', {
-			type: 'text',
-			cls: 'crystal-url-title',
-			value: url.title,
-			placeholder: 'Link title...'
-		});
-		titleInput.onchange = () => {
-			this.cardResearchUrls[index].title = titleInput.value;
-		};
-		
-		// Changed to textarea for bigger field and renamed label
-		const descContainer = urlEl.createEl('div', { cls: 'crystal-url-desc-container' });
-		const descLabel = descContainer.createEl('label', { 
-			cls: 'crystal-url-desc-label',
-			text: 'Optional description'
-		});
-		
-		const descTextarea = descContainer.createEl('textarea', {
-			cls: 'crystal-url-description-area',
-			value: url.description || '',
-			placeholder: 'Add notes about this URL or let AI generate a summary...'
-		});
-		descTextarea.rows = 2;
-		descTextarea.onchange = () => {
-			this.cardResearchUrls[index].description = descTextarea.value;
-		};
-		
-		// Auto-resize textarea based on content
-		descTextarea.addEventListener('input', () => {
-			descTextarea.style.height = 'auto';
-			descTextarea.style.height = descTextarea.scrollHeight + 'px';
-		});
-		
-		const actionsEl = urlEl.createEl('div', { cls: 'crystal-url-actions' });
-		
-		if (url.url) {
-			const openBtn = actionsEl.createEl('button', {
-				text: '🔗',
-				cls: 'crystal-url-open',
-				attr: { 'aria-label': 'Open URL' }
-			});
-			openBtn.onclick = () => {
-				window.open(url.url, '_blank');
-			};
-			
-			// Add hover preview
-			this.linkPreviewManager.addHoverPreview(openBtn, url.url);
-		}
-
-		// Add link status controls
-		this.addLinkStatusControls(urlEl, url, index);
-		
-		const removeBtn = actionsEl.createEl('button', {
-			text: '×',
-			cls: 'crystal-url-remove'
-		});
-		removeBtn.onclick = () => {
-			this.cardResearchUrls.splice(index, 1);
-			this.updateUrlsDisplay(container);
-		};
-	});
-}
-
-	private saveCard(): void {
-		if (!this.cardTitle.trim()) {
-			// TODO: Show validation error
+			// Clear URLs from todo
+			delete todo.urls;
 			return;
 		}
 
-		const updatedCard: Card = {
-			...this.card,
-			title: this.cardTitle.trim(),
-			description: this.cardDescription.trim(),
-			tags: this.cardTags.filter(tag => tag.trim()),
-			noteLinks: this.cardNoteLinks,
-			todos: this.cardTodos.filter(todo => todo.text.trim()),
-			researchUrls: this.cardResearchUrls.filter(url => url.url.trim()),
-			modified: Date.now()
-		};
-
-		this.onSave(updatedCard);
-		this.close();
+		// Use the AI service to detect URLs
+		const detectedUrls = this.plugin.todoAIService.detectUrlsInTodo(todo.text);
+		if (detectedUrls.length > 0) {
+			this.cardTodos[index].urls = detectedUrls;
+			this.renderDetectedUrls(todoEl, detectedUrls);
+		}
 	}
 
-	private generateId(): string {
-		return Math.random().toString(36).substr(2, 9);
+	private async handleAISummary(todo: TodoItem, index: number, todoEl: HTMLElement): Promise<void> {
+		try {
+			// Show loading state
+			const aiBtn = todoEl.querySelector('.crystal-todo-ai-btn') as HTMLElement;
+			const originalText = aiBtn.textContent;
+			aiBtn.textContent = '⏳';
+			aiBtn.classList.add('loading');
+
+			// Get AI summary
+			const result = await this.plugin.todoAIService.processTodoWithAI(todo, {
+				createNote: false,
+				linkToCard: false
+			});
+
+			if (result.success && result.summary) {
+				// Update the todo with summary
+				this.cardTodos[index] = result.todo;
+				// Render the AI summary
+				this.renderAISummary(todoEl, result.summary);
+				new Notice('AI summary generated!');
+			} else {
+				new Notice('Failed to generate AI summary: ' + (result.errors?.join(', ') || 'Unknown error'));
+			}
+
+		} catch (error) {
+			console.error('AI Summary error:', error);
+			new Notice('Failed to get AI summary: ' + error.message);
+		} finally {
+			// Reset button state
+			const aiBtn = todoEl.querySelector('.crystal-todo-ai-btn') as HTMLElement;
+			if (aiBtn) {
+				aiBtn.textContent = '🤖';
+				aiBtn.classList.remove('loading');
+			}
+		}
 	}
 
 	/**

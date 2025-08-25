@@ -2,7 +2,8 @@ import { requestUrl } from 'obsidian';
 import { Readability } from '@mozilla/readability';
 import { OpenAIService, TaskAnalysis } from './openai-service';
 import { TaskExtractionService } from './task-extraction-service';
-import { ExtractedTask, ResearchUrl, TodoItem, Board, Card } from './types';
+import { TodoAIService, TodoAISummaryResult } from './todo-ai-service';
+import { ExtractedTask, ResearchUrl, TodoItem, Board, Card, AISummary } from './types';
 import CrystalBoardsPlugin from './main';
 
 export interface SmartExtractApproval {
@@ -28,6 +29,12 @@ export interface SmartCard {
 	modified: number;
 	// AI-generated fields
 	aiAnalysis?: TaskAnalysis;
+	aiSummary?: AISummary;
+	linkedNote?: {
+		path: string;
+		name: string;
+		created: number;
+	};
 	originalTask: ExtractedTask;
 	confidence: number;
 }
@@ -52,12 +59,14 @@ export interface SmartExtractionPreview {
 export class SmartExtractionService {
 	private plugin: CrystalBoardsPlugin;
 	private openAIService: OpenAIService;
+	private todoAIService: TodoAIService;
 	private baseExtractionService: TaskExtractionService;
 	private urlCache = new Map<string, { content: string; timestamp: number }>();
 
 	constructor(plugin: CrystalBoardsPlugin) {
 		this.plugin = plugin;
 		this.baseExtractionService = plugin.taskExtractionService;
+		this.todoAIService = new TodoAIService(plugin);
 		this.initializeOpenAI();
 	}
 
@@ -327,7 +336,7 @@ export class SmartExtractionService {
 	/**
 	 * Try to scrape URL content using specialized scrapers and Mozilla Readability
 	 */
-	private async tryMCPScraping(url: string): Promise<string | null> {
+	async tryMCPScraping(url: string): Promise<string | null> {
 		console.log(`[DEBUG] Starting tryMCPScraping for URL: ${url}`);
 		console.log(`[DEBUG] URL includes reddit.com: ${url.includes('reddit.com')}`);
 		try {
@@ -478,16 +487,35 @@ export class SmartExtractionService {
 			// Step 2: Try Mozilla Readability for all URLs (including Reddit if JSON failed)
 			console.log('Attempting Mozilla Readability extraction for:', url);
 			
-			const response = await requestUrl({
-				url: url,
-				method: 'GET',
-				headers: {
-					'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+			let response;
+			try {
+				response = await requestUrl({
+					url: url,
+					method: 'GET',
+					headers: {
+						'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+					}
+				});
+			} catch (requestError) {
+				// Handle network errors and HTTP errors gracefully
+				if (requestError.status === 404) {
+					console.log(`[DEBUG] URL returned 404 Not Found: ${url}`);
+					return null;  // Return null instead of throwing
+				} else if (requestError.status >= 400 && requestError.status < 500) {
+					console.log(`[DEBUG] Client error ${requestError.status} for URL: ${url}`);
+					return null;  // Return null instead of throwing
+				} else if (requestError.status >= 500) {
+					console.log(`[DEBUG] Server error ${requestError.status} for URL: ${url}`);
+					return null;  // Return null instead of throwing
+				} else {
+					console.log(`[DEBUG] Network error for URL: ${url}`, requestError);
+					return null;  // Return null instead of throwing
 				}
-			});
+			}
 
 			if (response.status !== 200) {
-				throw new Error(`HTTP ${response.status}`);
+				console.log(`[DEBUG] Unexpected status ${response.status} for URL: ${url}`);
+				throw new Error(`HTTP ${response.status}`)
 			}
 
 			console.log(`[DEBUG] Response received (${response.status}), content length: ${response.text?.length || 0} chars`);
@@ -614,7 +642,8 @@ export class SmartExtractionService {
 				id: `url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 				url: url.url,
 				title: url.title,
-				description: `🔗 Reference link for research`, // Keep URL descriptions simple
+				// Use the actual summary if available, otherwise a default message
+				description: url.summary || `🔗 Reference link for research`,
 				created: Date.now(),
 				status: 'unread' as const,
 				importance: 'medium' as const
@@ -625,6 +654,59 @@ export class SmartExtractionService {
 			originalTask: task,
 			confidence: aiAnalysis.confidence
 		};
+
+		return smartCard;
+	}
+
+	/**
+	 * Enhanced task analysis that includes automatic note creation
+	 */
+	private async analyzeTaskWithAIEnhanced(task: ExtractedTask): Promise<SmartCard> {
+		// Get the basic smart card
+		const smartCard = await this.analyzeTaskWithAI(task);
+		
+		// Convert to TodoItem format for TodoAIService processing
+		const todoItem: TodoItem = {
+			id: smartCard.id,
+			text: task.cleanText,
+			completed: false,
+			created: Date.now(),
+			urls: task.urls.map(url => ({
+				id: `url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+				url: url.url,
+				title: url.title,
+				description: '',
+				created: Date.now(),
+				status: 'unread' as const,
+				importance: 'medium' as const
+			}))
+		};
+
+		// Process with TodoAIService to get automatic note creation
+		try {
+			const todoResult = await this.todoAIService.processTodoWithAI(todoItem, {
+				createNote: true,
+				linkToCard: true,
+				notePath: 'AI Notes/',
+				noteTemplate: ''
+			});
+
+			if (todoResult.success && todoResult.summary) {
+				// Enhance the smart card with AI summary information
+				smartCard.aiSummary = todoResult.summary;
+				
+				// Add linked note information if a note was created
+				if (todoResult.note) {
+					smartCard.linkedNote = {
+						path: todoResult.note.path,
+						name: todoResult.note.basename,
+						created: Date.now()
+					};
+				}
+			}
+		} catch (error) {
+			console.warn('TodoAI enhancement failed:', error);
+		}
 
 		return smartCard;
 	}
@@ -755,7 +837,7 @@ export class SmartExtractionService {
 
 			for (const task of previewTasks) {
 				try {
-					const smartCard = await this.analyzeTaskWithAI(task);
+					const smartCard = await this.analyzeTaskWithAIEnhanced(task);
 					smartCards.push(smartCard);
 				} catch (error) {
 					console.error('Preview analysis failed for task:', error);

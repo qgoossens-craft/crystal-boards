@@ -4,6 +4,7 @@ import { BoardView } from './board-view';
 import { DataManager } from './data-manager';
 import { TaskExtractionService } from './task-extraction-service';
 import { SmartExtractionService } from './smart-extraction-service';
+import { TodoAIService } from './todo-ai-service';
 import { PluginSettings, DASHBOARD_VIEW_TYPE, BOARD_VIEW_TYPE, Board } from './types';
 import { CrystalBoardsSettingTab } from './settings-tab';
 
@@ -12,6 +13,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 	dataManager: DataManager;
 	taskExtractionService: TaskExtractionService;
 	smartExtractionService: SmartExtractionService;
+	todoAIService: TodoAIService;
 	private accentColorObserver: MutationObserver | null = null;
 
 	async onload() {
@@ -28,6 +30,9 @@ export default class CrystalBoardsPlugin extends Plugin {
 		
 		// Initialize smart extraction service
 		this.smartExtractionService = new SmartExtractionService(this);
+		
+		// Initialize todo AI service
+		this.todoAIService = new TodoAIService(this);
 
 		// Register views
 		this.registerView(

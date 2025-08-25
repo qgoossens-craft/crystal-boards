@@ -1,4 +1,5 @@
 import { Modal, Setting, Notice } from 'obsidian';
+import { Modal, Notice } from 'obsidian';
 import CrystalBoardsPlugin from './main';
 import { SmartCard, SmartExtractionPreview, SmartExtractApproval } from './smart-extraction-service';
 
@@ -146,17 +147,53 @@ export class SmartExtractPreviewModal extends Modal {
 			}
 		}
 
+		// AI Summary if available
+		if (card.aiSummary) {
+			const summaryEl = cardEl.createEl('div', { cls: 'ai-summary-preview' });
+			summaryEl.createEl('strong', { text: '🤖 AI Summary: ' });
+			summaryEl.createEl('p', { 
+				cls: 'ai-summary-text',
+				text: card.aiSummary.summary 
+			});
+		}
+
+		// Linked Note if created
+		if (card.linkedNote) {
+			const noteEl = cardEl.createEl('div', { cls: 'linked-note-preview' });
+			noteEl.createEl('strong', { text: '📝 Auto-created Note: ' });
+			const noteLink = noteEl.createEl('a', {
+				text: card.linkedNote.name,
+				cls: 'internal-link'
+			});
+			noteLink.onclick = () => {
+				// Open the linked note in Obsidian
+				this.plugin.app.workspace.openLinkText(card.linkedNote.path, '');
+			};
+		}
+
 		// URLs if any
 		if (card.researchUrls.length > 0) {
 			const urlsEl = cardEl.createEl('div', { cls: 'card-urls' });
 			urlsEl.createEl('strong', { text: 'Related URLs:' });
 			for (const researchUrl of card.researchUrls) {
 				const urlEl = urlsEl.createEl('div', { cls: 'url-item' });
-				const link = urlEl.createEl('a', { 
+				const urlHeader = urlEl.createEl('div', { cls: 'url-header' });
+				
+				const link = urlHeader.createEl('a', { 
 					text: researchUrl.title,
 					href: researchUrl.url
 				});
 				link.setAttr('target', '_blank');
+				
+				// Create Note button for this URL
+				const createNoteBtn = urlHeader.createEl('button', {
+					text: '📝 Create Note',
+					cls: 'create-note-btn'
+				});
+				createNoteBtn.title = 'Create Obsidian note from URL summary';
+				createNoteBtn.onclick = async () => {
+					await this.createNoteFromUrl(researchUrl, card.originalTask.cleanText);
+				};
 				
 				if (researchUrl.description) {
 					urlEl.createEl('p', { 
@@ -271,6 +308,92 @@ export class SmartExtractPreviewModal extends Modal {
 		if (approveBtn) {
 			approveBtn.textContent = this.getExtractButtonText();
 			approveBtn.disabled = this.approval.selectedCards.length === 0;
+		}
+	}
+
+	/**
+	 * Create a note from URL summary
+	 */
+	private async createNoteFromUrl(researchUrl: any, taskContext: string): Promise<void> {
+		try {
+			// Show loading state
+			const button = document.querySelector('.create-note-btn:focus') as HTMLElement;
+			const originalText = button?.textContent;
+			if (button) {
+				button.textContent = '⏳ Creating...';
+				button.setAttribute('disabled', 'true');
+			}
+
+			// Check if OpenAI API key is configured
+			if (!this.plugin.settings.openAIApiKey) {
+				throw new Error('OpenAI API key not configured. Please configure it in settings.');
+			}
+
+			// Use TodoAIService to create note
+			const todoAIService = new (await import('./todo-ai-service')).TodoAIService(this.plugin);
+			
+			// Create a TodoItem for this URL
+			const todoItem = {
+				id: `temp-${Date.now()}`,
+				text: taskContext,
+				completed: false,
+				created: Date.now(),
+				urls: [{
+					id: researchUrl.id || `url-${Date.now()}`,
+					url: researchUrl.url,
+					title: researchUrl.title,
+					description: researchUrl.description || '',
+					created: Date.now(),
+					status: 'unread' as const,
+					importance: 'medium' as const
+				}]
+			};
+
+			// Process with AI to create note
+			const result = await todoAIService.processTodoWithAI(todoItem, {
+				createNote: true,
+				linkToCard: true,
+				notePath: 'AI Notes/',
+				noteTemplate: ''
+			});
+
+			if (result.success && result.note) {
+				// Success feedback
+				if (button) {
+					button.textContent = '✅ Created!';
+					button.style.background = 'var(--interactive-success)';
+					
+					// Open the created note
+					setTimeout(() => {
+						this.plugin.app.workspace.openLinkText(result.note!.path, '');
+					}, 500);
+
+					// Reset button after delay
+					setTimeout(() => {
+						if (originalText && button) {
+							button.textContent = originalText;
+							button.removeAttribute('disabled');
+							button.style.background = '';
+						}
+					}, 2000);
+				}
+
+				// Show success notice
+				new Notice(`✅ Note created: ${result.note.basename}`);
+			} else {
+				throw new Error(result.errors?.join(', ') || 'Failed to create note');
+			}
+
+		} catch (error) {
+			console.error('Failed to create note from URL:', error);
+			new Notice(`❌ Failed to create note: ${error.message}`);
+			
+			// Reset button
+			const button = document.querySelector('.create-note-btn:focus') as HTMLElement;
+			if (button && button.textContent?.includes('Creating')) {
+				button.textContent = '📝 Create Note';
+				button.removeAttribute('disabled');
+			}
 		}
 	}
 

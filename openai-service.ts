@@ -111,7 +111,7 @@ Guidelines:
 	/**
 	 * Make API call to OpenAI
 	 */
-	private async callOpenAI(prompt: string, requireJson = true): Promise<string> {
+	async callOpenAI(prompt: string, requireJson = true): Promise<string> {
 		if (!this.config.apiKey) {
 			throw new Error('OpenAI API key not configured');
 		}

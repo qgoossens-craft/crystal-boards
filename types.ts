@@ -42,6 +42,29 @@ export interface TodoItem {
 	text: string;
 	completed: boolean;
 	created: number;
+	// Enhanced features for AI summarization and note creation
+	urls?: DetectedUrl[];
+	aiSummary?: AISummary;
+	linkedNoteId?: string; // ID of auto-created note
+}
+
+export interface DetectedUrl {
+	id: string;
+	url: string;
+	title?: string;
+	domain?: string;
+	detected: number;
+	description?: string; // Can contain summary from smart extract
+}
+
+export interface AISummary {
+	id: string;
+	content: string;
+	sourceUrl: string;
+	confidence: number;
+	created: number;
+	model?: string;
+	tokens?: number;
 }
 
 export interface ResearchUrl {
