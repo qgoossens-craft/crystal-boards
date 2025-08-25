@@ -326,6 +326,22 @@ You can include:
 		saveBtn.onclick = () => this.saveCard();
 	}
 
+	private saveCard(): void {
+		// Update the card with edited values
+		this.card.title = this.cardTitle;
+		this.card.description = this.cardDescription;
+		this.card.tags = [...this.cardTags];
+		this.card.noteLinks = [...this.cardNoteLinks];
+		this.card.todos = [...this.cardTodos];
+		this.card.researchUrls = [...this.cardResearchUrls];
+		
+		// Call the onSave callback
+		this.onSave(this.card);
+		
+		// Close the modal
+		this.close();
+	}
+
 	private renderProgressBar(container: HTMLElement): void {
 		const completedTodos = this.cardTodos.filter(todo => todo.completed).length;
 		const totalTodos = this.cardTodos.length;
