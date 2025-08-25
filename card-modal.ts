@@ -1873,18 +1873,18 @@ You can include:
 		}
 
 		this.cardTodos.forEach((todo, index) => {
-			const todoEl = container.createEl('div', { cls: 'crystal-todo-item crystal-todo-enhanced' });
+			const todoEl = container.createEl('div', { cls: 'crystal-todo-item-redesigned' });
 			
-			// Main todo row
-			const todoMainRow = todoEl.createEl('div', { cls: 'crystal-todo-main-row' });
-			
-			const checkbox = todoMainRow.createEl('input', {
+			// Checkbox on the left
+			const checkbox = todoEl.createEl('input', {
 				type: 'checkbox',
-				cls: 'crystal-todo-checkbox'
+				cls: 'crystal-todo-checkbox-left'
 			});
 			checkbox.checked = todo.completed;
 			checkbox.onchange = () => {
 				this.cardTodos[index].completed = checkbox.checked;
+				// Update text input styling based on completion
+				this.updateTodoTextStyling(textInput, checkbox.checked);
 				// Update progress bar
 				const progressContainer = this.contentEl.querySelector('.crystal-progress-container');
 				if (progressContainer) {
@@ -1894,16 +1894,19 @@ You can include:
 				}
 			};
 			
-			const textInput = todoMainRow.createEl('input', {
+			// Task title input - expanded width
+			const textInput = todoEl.createEl('input', {
 				type: 'text',
-				cls: 'crystal-todo-text',
+				cls: 'crystal-todo-text-redesigned',
 				value: todo.text,
 				placeholder: 'Enter task description...'
 			});
+			
+			// Apply initial styling based on completion status
+			this.updateTodoTextStyling(textInput, todo.completed);
+			
 			textInput.onchange = () => {
 				this.cardTodos[index].text = textInput.value;
-				// Auto-detect URLs when text changes
-				this.detectUrlsInTodo(todo, index, todoEl);
 			};
 			
 			// Add Enter key support for todos
@@ -1920,35 +1923,10 @@ You can include:
 				}
 			});
 
-			// Enhanced AI actions section
-			const actionsRow = todoMainRow.createEl('div', { cls: 'crystal-todo-actions' });
-
-			// Check if this todo has URLs
-			const hasUrls = this.hasUrlsInText(todo.text);
-			
-			// Show AI buttons if URLs are detected
-			if (hasUrls) {
-				// AI Summary button
-				const aiBtn = actionsRow.createEl('button', {
-					text: '🤖 AI',
-					cls: 'crystal-todo-ai-btn',
-					attr: { 'aria-label': 'Get AI Summary', 'title': 'Get AI Summary of URLs' }
-				});
-				aiBtn.onclick = () => this.handleAISummary(todo, index, todoEl);
-			} else if (todo.text.trim()) {
-				// Show helpful hint when todo has text but no URLs
-				const hintBtn = actionsRow.createEl('span', {
-					text: 'Add URL for AI features',
-					cls: 'crystal-todo-hint'
-				});
-				hintBtn.style.fontSize = '0.7rem';
-				hintBtn.style.color = 'var(--text-muted)';
-				hintBtn.style.fontStyle = 'italic';
-			}
-
-			const removeBtn = actionsRow.createEl('button', {
+			// Remove button
+			const removeBtn = todoEl.createEl('button', {
 				text: '×',
-				cls: 'crystal-todo-remove'
+				cls: 'crystal-todo-remove-redesigned'
 			});
 			removeBtn.onclick = () => {
 				this.cardTodos.splice(index, 1);
@@ -1963,17 +1941,27 @@ You can include:
 					this.renderProgressBar(headerEl);
 				}
 			};
-
-			// Show AI summary if available
-			if (todo.aiSummary) {
-				this.renderAISummary(todoEl, todo.aiSummary);
-			}
-
-			// Show detected URLs
-			if (todo.urls && todo.urls.length > 0) {
-				this.renderDetectedUrls(todoEl, todo.urls);
-			}
 		});
+	}
+	
+	/**
+	 * Update todo text styling based on completion status
+	 */
+	/**
+	 * Update todo text styling based on completion status
+	 */
+	private updateTodoTextStyling(textInput: HTMLInputElement, completed: boolean): void {
+		if (completed) {
+			textInput.style.textDecoration = 'line-through';
+			textInput.style.color = 'var(--text-muted)';
+			textInput.readOnly = true;
+			textInput.style.cursor = 'default';
+		} else {
+			textInput.style.textDecoration = 'none';
+			textInput.style.color = 'var(--text-normal)';
+			textInput.readOnly = false;
+			textInput.style.cursor = 'text';
+		}
 	}
 
 	private hasUrlsInText(text: string): boolean {

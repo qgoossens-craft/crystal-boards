@@ -2240,7 +2240,7 @@ button.mod-warning:hover {
 }
 
 .crystal-section-title {
-	margin: 0 0 1rem 0;
+	margin: 0;
 	color: var(--text-normal);
 	font-size: 1.1rem;
 	font-weight: 600;
@@ -2250,7 +2250,7 @@ button.mod-warning:hover {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 1rem;
+	margin-bottom: 0.5rem;
 }
 
 .crystal-add-btn {
@@ -4827,6 +4827,73 @@ button.mod-warning:hover {
 	font-size: 1.2rem;
 	font-weight: 600;
 	margin: 0;
+}
+
+/* Redesigned Todo Items */
+.crystal-todo-item-redesigned {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.25rem 0.5rem;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	margin-bottom: 0.2rem;
+	transition: all 0.2s ease;
+}
+
+.crystal-todo-item-redesigned:hover {
+	border-color: var(--background-modifier-border-hover);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.crystal-todo-checkbox-left {
+	margin: 0;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.crystal-todo-text-redesigned {
+	flex: 1;
+	background: transparent;
+	border: none;
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	padding: 0.15rem 0.3rem;
+	line-height: 1.3;
+	font-family: inherit;
+	outline: none;
+	transition: all 0.2s ease;
+}
+
+.crystal-todo-text-redesigned:focus {
+	background: var(--background-primary);
+	border-radius: 4px;
+	box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.1);
+}
+
+.crystal-todo-text-redesigned[readonly] {
+	background: transparent;
+	box-shadow: none;
+}
+
+.crystal-todo-remove-redesigned {
+	background: transparent;
+	border: none;
+	color: var(--text-faint);
+	font-size: 1.2rem;
+	cursor: pointer;
+	padding: 0.2rem 0.4rem;
+	border-radius: 3px;
+	transition: all 0.2s ease;
+	flex-shrink: 0;
+	opacity: 0.6;
+}
+
+.crystal-todo-remove-redesigned:hover {
+	color: var(--text-error);
+	background: var(--background-modifier-hover);
+	opacity: 1;
 }
 
 .crystal-board-error-message {
