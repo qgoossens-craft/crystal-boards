@@ -5,7 +5,8 @@ export interface TaskAnalysis {
 	context: string;
 	description: string;
 	nextSteps: string[];
-	confidence: number;
+	suggestedSearchQueries?: string[];
+
 }
 
 export interface OpenAIConfig {
@@ -70,10 +71,14 @@ Summary:`;
 	 * Build the prompt for task analysis
 	 */
 	private buildTaskAnalysisPrompt(task: ExtractedTask, urlContent?: string): string {
+		// Check if the task is a question
+		const isQuestion = this.isQuestion(task.cleanText);
+		
 		let prompt = `You are an intelligent task assistant. Analyze this task and provide structured insights based on all available information.
 
 Task: "${task.cleanText}"
-Tags: ${task.tags.length > 0 ? task.tags.join(', ') : 'none'}`;
+Tags: ${task.tags.length > 0 ? task.tags.join(', ') : 'none'}
+Type: ${isQuestion ? 'QUESTION - Provide a direct answer' : 'TASK'}`;
 
 		if (urlContent) {
 			prompt += `
@@ -82,7 +87,38 @@ Related Content from URL:
 ${urlContent}`;
 		}
 
-		prompt += `
+		// Different prompt structure for questions vs regular tasks
+		if (isQuestion) {
+			prompt += `
+
+This is a QUESTION that needs answering. Based on ${urlContent ? 'the URL content and your knowledge' : 'your knowledge'}, provide:
+
+{
+  "context": "One clear sentence explaining the topic of this question",
+  "description": "A comprehensive 3-5 sentence answer to the question. Be specific and informative. Include key facts and insights.",
+  "nextSteps": [
+    "Research task 1: Specific area to explore further",
+    "Action task 2: Practical step to apply this knowledge", 
+    "Learning task 3: Related topic to investigate",
+    "Implementation task 4: How to use this information",
+    "Verification task 5: How to validate or test this knowledge"
+  ],
+  "suggestedSearchQueries": [
+    "Specific search query 1 for more information",
+    "Specific search query 2 for practical examples",
+    "Specific search query 3 for related topics"
+  ],
+
+}
+
+Guidelines for QUESTIONS:
+- Provide a direct, informative answer in the description
+- Generate 5 specific follow-up tasks related to the question topic
+- Suggest search queries that would find authoritative sources
+- Focus on educational value and practical application
+- If you don't have enough information, acknowledge it and suggest research steps`;
+		} else {
+			prompt += `
 
 Based on the task description ${urlContent ? 'and the URL content above' : ''}, provide your analysis in JSON format:
 
@@ -94,18 +130,52 @@ Based on the task description ${urlContent ? 'and the URL content above' : ''}, 
     "Specific actionable step 2", 
     "Specific actionable step 3"
   ],
-  "confidence": 0.85
+
 }
 
 Guidelines:
 - Use the URL content to provide specific, detailed insights rather than generic descriptions
 - Make the context and description highly specific to what was actually found in the content
 - Create actionable next steps that reflect the actual content and requirements
-- Set confidence based on how much concrete information you have
+
+- If the URL content is substantial, prioritize it over generic task interpretation
+- Respond with valid JSON only`;
+		}
+
+		prompt += `
+
+Guidelines:
+- Use the URL content to provide specific, detailed insights rather than generic descriptions
+- Make the context and description highly specific to what was actually found in the content
+- Create actionable next steps that reflect the actual content and requirements
+
 - If the URL content is substantial, prioritize it over generic task interpretation
 - Respond with valid JSON only`;
 
 		return prompt;
+	}
+
+	private isQuestion(text: string): boolean {
+		// Check if the text is a question
+		const questionWords = ['what', 'where', 'when', 'why', 'how', 'who', 'which', 'whom', 'whose', 
+							   'can', 'could', 'would', 'should', 'is', 'are', 'do', 'does', 'did', 
+							   'will', 'shall', 'may', 'might'];
+		
+		const trimmedText = text.trim().toLowerCase();
+		
+		// Check if it ends with a question mark
+		if (text.trim().endsWith('?')) {
+			return true;
+		}
+		
+		// Check if it starts with a question word
+		for (const word of questionWords) {
+			if (trimmedText.startsWith(word + ' ')) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 
 	/**
@@ -213,8 +283,8 @@ Guidelines:
 				context: parsed.context || 'Task context unclear',
 				description: parsed.description || 'No description generated',
 				nextSteps: Array.isArray(parsed.nextSteps) ? parsed.nextSteps.slice(0, 5) : [],
-				confidence: typeof parsed.confidence === 'number' ? 
-					Math.min(1, Math.max(0, parsed.confidence)) : 0.5
+				suggestedSearchQueries: Array.isArray(parsed.suggestedSearchQueries) ? parsed.suggestedSearchQueries : [],
+
 			};
 		} catch (error) {
 			console.error('Failed to parse OpenAI response:', response);

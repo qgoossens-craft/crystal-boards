@@ -3701,10 +3701,10 @@ button.mod-warning:hover {
 	padding-top: 0.25rem;
 }
 
-.smart-extract-header h2 {
+.smart-extract-title {
 	margin: 0 0 0.75rem 0;
 	font-size: 1.6rem;
-	color: var(--text-normal);
+	color: var(--interactive-accent);
 }
 
 .cards-header {
@@ -3776,10 +3776,18 @@ button.mod-warning:hover {
 .smart-card-preview .card-header {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
 	margin-bottom: 1rem;
 	position: relative;
 	min-height: 2rem;
+	gap: 0.75rem;
+}
+
+.smart-card-preview .card-header-left {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex: 1;
+	min-width: 0; /* Allow text to shrink */
 }
 
 .smart-card-preview .card-title {
@@ -3787,6 +3795,9 @@ button.mod-warning:hover {
 	flex: 1;
 	font-size: 1.05rem;
 	line-height: 1.4;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	min-width: 0; /* Allow text to shrink */
 }
 
 .confidence-badge {
@@ -3877,10 +3888,42 @@ button.mod-warning:hover {
 	font-size: 0.8rem;
 	cursor: pointer;
 	transition: all 0.2s ease;
-	position: absolute;
-	top: 0.1rem;
-	right: 0.1rem;
-	z-index: 10;
+}
+
+.header-edit-btn {
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	padding: 0.25rem 0.5rem;
+	border-radius: 4px;
+	font-size: 0.75rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.header-edit-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.content-edit-btn {
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	padding: 0.25rem 0.5rem;
+	border-radius: 4px;
+	font-size: 0.75rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	float: right;
+	margin-bottom: 0.5rem;
+}
+
+.content-edit-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
 }
 
 .smart-card-preview {

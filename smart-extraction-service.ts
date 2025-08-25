@@ -36,7 +36,7 @@ export interface SmartCard {
 		created: number;
 	};
 	originalTask: ExtractedTask;
-	confidence: number;
+
 }
 
 export interface SmartExtractionResult {
@@ -53,7 +53,7 @@ export interface SmartExtractionPreview {
 	smartCards: SmartCard[];
 	totalTasks: number;
 	estimatedCost: number;
-	averageConfidence: number;
+
 }
 
 export class SmartExtractionService {
@@ -588,6 +588,73 @@ export class SmartExtractionService {
 	/**
 	 * Analyze a single task with AI
 	 */
+	private isQuestion(text: string): boolean {
+		// Check if the text is a question (same logic as OpenAI service)
+		const questionWords = ['what', 'where', 'when', 'why', 'how', 'who', 'which', 'whom', 'whose', 
+							   'can', 'could', 'would', 'should', 'is', 'are', 'do', 'does', 'did', 
+							   'will', 'shall', 'may', 'might'];
+		
+		const trimmedText = text.trim().toLowerCase();
+		
+		// Check if it ends with a question mark
+		if (text.trim().endsWith('?')) {
+			return true;
+		}
+		
+		// Check if it starts with a question word
+		for (const word of questionWords) {
+			if (trimmedText.startsWith(word + ' ')) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+
+	private async searchGoogleForUrls(query: string, limit: number = 5): Promise<Array<{ url: string; title: string }>> {
+		try {
+			// Simple Google search URL generation
+			// Note: In production, you'd want to use a proper search API
+			const searchUrls: Array<{ url: string; title: string }> = [];
+			
+			// For now, we'll return suggested search URLs that users can manually search
+			// In a production environment, you'd integrate with Google Custom Search API or similar
+			searchUrls.push({
+				url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+				title: `Google Search: ${query}`
+			});
+			
+			// Add some common knowledge bases
+			if (query.toLowerCase().includes('how') || query.toLowerCase().includes('what')) {
+				searchUrls.push({
+					url: `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`,
+					title: `Wikipedia: ${query}`
+				});
+			}
+			
+			// Add Stack Overflow for technical questions
+			if (query.match(/code|programming|javascript|python|java|css|html|api|function|error/i)) {
+				searchUrls.push({
+					url: `https://stackoverflow.com/search?q=${encodeURIComponent(query)}`,
+					title: `Stack Overflow: ${query}`
+				});
+			}
+			
+			// Add documentation sites for specific technologies
+			if (query.match(/react|vue|angular|node|npm/i)) {
+				searchUrls.push({
+					url: `https://www.google.com/search?q=site:developer.mozilla.org+${encodeURIComponent(query)}`,
+					title: `MDN Docs: ${query}`
+				});
+			}
+			
+			return searchUrls.slice(0, limit);
+		} catch (error) {
+			console.error('Error generating search URLs:', error);
+			return [];
+		}
+	}
+
 	private async analyzeTaskWithAI(task: ExtractedTask): Promise<SmartCard> {
 		// Step 1: Fetch and summarize URLs if present
 		let urlSummaries: string[] = [];
@@ -610,26 +677,49 @@ export class SmartExtractionService {
 		}
 
 		// Step 2: Analyze task with OpenAI
-		const urlContext = urlSummaries.length > 0 ? urlSummaries.join('\n\n') : undefined;
+		const urlContext = urlSummaries.length > 0 ? urlSummaries.join('\\n\\n') : undefined;
 		const aiAnalysis = await this.openAIService.analyzeTask(task, urlContext);
 
-		// Step 3: Build comprehensive card description combining AI analysis and URL summaries
+		// Step 3: Generate additional research URLs for questions
+		let additionalSearchUrls: Array<{ url: string; title: string }> = [];
+		if (aiAnalysis.suggestedSearchQueries && aiAnalysis.suggestedSearchQueries.length > 0) {
+			console.log('Detected question with search queries:', aiAnalysis.suggestedSearchQueries);
+			for (const query of aiAnalysis.suggestedSearchQueries.slice(0, 3)) {
+				const searchUrls = await this.searchGoogleForUrls(query, 2);
+				additionalSearchUrls.push(...searchUrls);
+			}
+		}
+
+		// Step 4: Build comprehensive card description
 		let cardDescription = aiAnalysis.description;
 		
-		// Add URL summaries to the main card description if they exist
 		if (urlSummaries.length > 0) {
-			cardDescription += '\n\n📚 **Research Summary:**\n';
+			cardDescription += '\\n\\n📚 **Research Summary:**\\n';
 			urlSummaries.forEach((summary, index) => {
 				const urlTitle = enhancedUrls[index]?.title || `URL ${index + 1}`;
-				cardDescription += `\n**${urlTitle}:**\n${summary}\n`;
+				cardDescription += `\\n**${urlTitle}:**\\n${summary}\\n`;
 			});
 		}
 
-		// Step 4: Create enhanced smart card
+		// Step 5: Create smart card
+		const isQuestionTask = this.isQuestion(task.cleanText);
+		// Format title for questions professionally
+		let formattedTitle = task.cleanText;
+		if (isQuestionTask) {
+			// Remove question mark emoji if present  
+			formattedTitle = formattedTitle.replace(/^\s*[❓?]\s*/, '');
+			// Add professional prefix
+			formattedTitle = `Research: ${formattedTitle}`;
+		} else {
+			// Use regular prefix for non-questions
+			const prefix = this.plugin.settings.smartExtractPrefix || '🤖 ';
+			formattedTitle = `${prefix}${formattedTitle}`;
+		}
+		
 		const smartCard: SmartCard = {
 			id: `smart-card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-			title: `${this.plugin.settings.smartExtractPrefix || '🤖 '}${task.cleanText}`,
-			description: cardDescription, // ← Now includes AI analysis + URL summaries
+			title: formattedTitle,
+			description: cardDescription,
 			tags: task.tags,
 			noteLinks: [],
 			todos: aiAnalysis.nextSteps.map(step => ({
@@ -638,21 +728,31 @@ export class SmartExtractionService {
 				completed: false,
 				created: Date.now()
 			})),
-			researchUrls: enhancedUrls.map(url => ({
-				id: `url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-				url: url.url,
-				title: url.title,
-				// Use the actual summary if available, otherwise a default message
-				description: url.summary || `🔗 Reference link for research`,
-				created: Date.now(),
-				status: 'unread' as const,
-				importance: 'medium' as const
-			})),
+			researchUrls: [
+				...enhancedUrls.map(url => ({
+					id: `url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+					url: url.url,
+					title: url.title,
+					description: url.summary || '🔗 Reference link for research',
+					created: Date.now(),
+					status: 'unread' as const,
+					importance: 'medium' as const
+				})),
+				...additionalSearchUrls.map(url => ({
+					id: `search-url-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+					url: url.url,
+					title: url.title,
+					description: '🔍 Additional research resource',
+					created: Date.now(),
+					status: 'unread' as const,
+					importance: 'high' as const
+				}))
+			].slice(0, 5), // Limit to 5 URLs maximum
 			created: Date.now(),
 			modified: Date.now(),
 			aiAnalysis,
 			originalTask: task,
-			confidence: aiAnalysis.confidence
+
 		};
 
 		return smartCard;
@@ -827,7 +927,7 @@ export class SmartExtractionService {
 					smartCards: [],
 					totalTasks: 0,
 					estimatedCost: 0,
-					averageConfidence: 0
+	
 				};
 			}
 
@@ -844,10 +944,7 @@ export class SmartExtractionService {
 				}
 			}
 
-			// Calculate metrics
-			const avgConfidence = smartCards.length > 0 
-				? smartCards.reduce((sum, card) => sum + card.confidence, 0) / smartCards.length 
-				: 0;
+
 
 			// Rough cost estimation (tokens * model cost)
 			const estimatedTokensPerTask = 300; // rough estimate
@@ -859,7 +956,7 @@ export class SmartExtractionService {
 				smartCards,
 				totalTasks: extractedTasks.length,
 				estimatedCost,
-				averageConfidence: avgConfidence
+	
 			};
 
 		} catch (error) {
@@ -886,7 +983,7 @@ export class SmartExtractionService {
 					smartCards: [],
 					totalTasks: 0,
 					estimatedCost: 0,
-					averageConfidence: 0
+	
 				};
 			}
 
@@ -905,10 +1002,7 @@ export class SmartExtractionService {
 				}
 			}
 
-			// Calculate metrics
-			const avgConfidence = smartCards.length > 0 
-				? smartCards.reduce((sum, card) => sum + card.confidence, 0) / smartCards.length 
-				: 0;
+
 
 			// Rough cost estimation (tokens * model cost)
 			const estimatedTokensPerTask = 350; // slightly higher for full analysis
@@ -920,7 +1014,7 @@ export class SmartExtractionService {
 				smartCards,
 				totalTasks: extractedTasks.length,
 				estimatedCost,
-				averageConfidence: avgConfidence
+	
 			};
 
 			// Add errors to preview if needed

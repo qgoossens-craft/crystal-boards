@@ -25,33 +25,15 @@ export class SmartExtractPreviewModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('smart-extract-preview-modal');
 
-		// Header
+		// Header with accent color
 		const headerEl = contentEl.createEl('div', { cls: 'smart-extract-header' });
-		headerEl.createEl('h2', { text: '🤖 Smart Extract Preview' });
-		
-		// Summary stats
-		const statsEl = contentEl.createEl('div', { cls: 'smart-extract-stats' });
-		statsEl.createEl('p', { 
-			text: `Found ${this.preview.totalTasks} tasks total` 
+		const titleEl = headerEl.createEl('h2', { 
+			text: '🤖 Smart Extract Preview',
+			cls: 'smart-extract-title'
 		});
-		
-		if (this.preview.estimatedCost > 0) {
-			statsEl.createEl('p', { 
-				text: `💰 ~$${this.preview.estimatedCost.toFixed(4)} cost` 
-			});
-		}
-		
-		if (this.preview.averageConfidence > 0) {
-			const confidencePercent = (this.preview.averageConfidence * 100).toFixed(0);
-			statsEl.createEl('p', { 
-				text: `🎯 ${confidencePercent}% confidence` 
-			});
-		}
 
 		// Cards preview
 		if (this.preview.smartCards.length > 0) {
-			const cardsHeaderEl = contentEl.createEl('div', { cls: 'cards-header' });
-			cardsHeaderEl.createEl('h3', { text: 'Tasks Preview' });
 			const cardsContainer = contentEl.createEl('div', { cls: 'smart-cards-preview' });
 
 			for (const card of this.preview.smartCards) {
@@ -87,10 +69,12 @@ export class SmartExtractPreviewModal extends Modal {
 	private renderCardPreview(container: HTMLElement, card: SmartCard) {
 		const cardEl = container.createEl('div', { cls: 'smart-card-preview' });
 
-		// Card header with checkbox and confidence
+		// Card header with flexbox layout
 		const headerEl = cardEl.createEl('div', { cls: 'card-header' });
 		
-		const checkbox = headerEl.createEl('input', { type: 'checkbox' });
+		// Left side: checkbox and title
+		const leftSide = headerEl.createEl('div', { cls: 'card-header-left' });
+		const checkbox = leftSide.createEl('input', { type: 'checkbox' });
 		checkbox.checked = this.approval.selectedCards.includes(card);
 		checkbox.onchange = () => {
 			if (checkbox.checked) {
@@ -107,20 +91,26 @@ export class SmartExtractPreviewModal extends Modal {
 			this.updateExtractButton();
 		};
 
-		const titleEl = headerEl.createEl('span', { 
+		const titleEl = leftSide.createEl('span', { 
 			cls: 'card-title',
 			text: card.title 
 		});
 
-		const confidenceEl = headerEl.createEl('span', { 
-			cls: 'confidence-badge',
-			text: `${(card.confidence * 100).toFixed(0)}%`
-		});
-		confidenceEl.title = 'AI Confidence Level';
+
 
 		// AI Analysis
 		if (card.aiAnalysis) {
 			const analysisEl = cardEl.createEl('div', { cls: 'ai-analysis' });
+			
+			// Edit button at top of content area
+			const editBtn = analysisEl.createEl('button', { 
+				text: '✏️ Edit',
+				cls: 'card-edit-btn content-edit-btn'
+			});
+			editBtn.title = 'Edit AI suggestions';
+			editBtn.onclick = () => {
+				this.openCardEditor(card, cardEl);
+			};
 			
 			// Context
 			if (card.aiAnalysis.context) {
@@ -185,15 +175,7 @@ export class SmartExtractPreviewModal extends Modal {
 				});
 				link.setAttr('target', '_blank');
 				
-				// Create Note button for this URL
-				const createNoteBtn = urlHeader.createEl('button', {
-					text: '📝 Create Note',
-					cls: 'create-note-btn'
-				});
-				createNoteBtn.title = 'Create Obsidian note from URL summary';
-				createNoteBtn.onclick = async () => {
-					await this.createNoteFromUrl(researchUrl, card.originalTask.cleanText);
-				};
+
 				
 				if (researchUrl.description) {
 					urlEl.createEl('p', { 
@@ -204,15 +186,7 @@ export class SmartExtractPreviewModal extends Modal {
 			}
 		}
 
-		// Edit button for modifications
-		const editBtn = cardEl.createEl('button', { 
-			text: '✏️ Edit',
-			cls: 'card-edit-btn'
-		});
-		editBtn.title = 'Edit AI suggestions';
-		editBtn.onclick = () => {
-			this.openCardEditor(card, cardEl);
-		};
+
 	}
 
 	private async generateFullPreview() {
@@ -314,88 +288,7 @@ export class SmartExtractPreviewModal extends Modal {
 	/**
 	 * Create a note from URL summary
 	 */
-	private async createNoteFromUrl(researchUrl: any, taskContext: string): Promise<void> {
-		try {
-			// Show loading state
-			const button = document.querySelector('.create-note-btn:focus') as HTMLElement;
-			const originalText = button?.textContent;
-			if (button) {
-				button.textContent = '⏳ Creating...';
-				button.setAttribute('disabled', 'true');
-			}
-
-			// Check if OpenAI API key is configured
-			if (!this.plugin.settings.openAIApiKey) {
-				throw new Error('OpenAI API key not configured. Please configure it in settings.');
-			}
-
-			// Use TodoAIService to create note
-			const todoAIService = new (await import('./todo-ai-service')).TodoAIService(this.plugin);
-			
-			// Create a TodoItem for this URL
-			const todoItem = {
-				id: `temp-${Date.now()}`,
-				text: taskContext,
-				completed: false,
-				created: Date.now(),
-				urls: [{
-					id: researchUrl.id || `url-${Date.now()}`,
-					url: researchUrl.url,
-					title: researchUrl.title,
-					description: researchUrl.description || '',
-					created: Date.now(),
-					status: 'unread' as const,
-					importance: 'medium' as const
-				}]
-			};
-
-			// Process with AI to create note
-			const result = await todoAIService.processTodoWithAI(todoItem, {
-				createNote: true,
-				linkToCard: true,
-				notePath: 'AI Notes/',
-				noteTemplate: ''
-			});
-
-			if (result.success && result.note) {
-				// Success feedback
-				if (button) {
-					button.textContent = '✅ Created!';
-					button.style.background = 'var(--interactive-success)';
-					
-					// Open the created note
-					setTimeout(() => {
-						this.plugin.app.workspace.openLinkText(result.note!.path, '');
-					}, 500);
-
-					// Reset button after delay
-					setTimeout(() => {
-						if (originalText && button) {
-							button.textContent = originalText;
-							button.removeAttribute('disabled');
-							button.style.background = '';
-						}
-					}, 2000);
-				}
-
-				// Show success notice
-				new Notice(`✅ Note created: ${result.note.basename}`);
-			} else {
-				throw new Error(result.errors?.join(', ') || 'Failed to create note');
-			}
-
-		} catch (error) {
-			console.error('Failed to create note from URL:', error);
-			new Notice(`❌ Failed to create note: ${error.message}`);
-			
-			// Reset button
-			const button = document.querySelector('.create-note-btn:focus') as HTMLElement;
-			if (button && button.textContent?.includes('Creating')) {
-				button.textContent = '📝 Create Note';
-				button.removeAttribute('disabled');
-			}
-		}
-	}
+	// Method removed - Create Note functionality no longer needed
 
 	/**
 	 * Open inline editor for a specific card
@@ -523,7 +416,7 @@ export class SmartExtractPreviewModal extends Modal {
 	};
 	
 	// Update the edit button to show it's in edit mode
-	const editBtn = cardEl.querySelector('.card-edit-btn') as HTMLButtonElement;
+	const editBtn = cardEl.querySelector('.content-edit-btn') as HTMLButtonElement;
 	if (editBtn) {
 		editBtn.style.display = 'none';
 	}
