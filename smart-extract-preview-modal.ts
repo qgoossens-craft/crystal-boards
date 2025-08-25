@@ -50,12 +50,6 @@ export class SmartExtractPreviewModal extends Modal {
 		});
 		cancelBtn.onclick = () => this.close();
 
-		const previewBtn = buttonsEl.createEl('button', { 
-			text: 'Generate Full Preview',
-			cls: 'mod-secondary'
-		});
-		previewBtn.onclick = () => this.generateFullPreview();
-
 		const approveBtn = buttonsEl.createEl('button', { 
 			text: this.getExtractButtonText(),
 			cls: 'mod-cta'
@@ -187,28 +181,6 @@ export class SmartExtractPreviewModal extends Modal {
 		}
 
 
-	}
-
-	private async generateFullPreview() {
-		const btn = this.contentEl.querySelector('.mod-secondary') as HTMLButtonElement;
-		if (btn) {
-			btn.disabled = true;
-			btn.textContent = 'Generating...';
-		}
-
-		try {
-			const fullPreview = await this.plugin.smartExtractionService.generatePreview();
-			// Close this modal and open a new one with full preview
-			this.close();
-			new SmartExtractPreviewModal(this.plugin, fullPreview).open();
-		} catch (error) {
-			new Notice(`Failed to generate full preview: ${error.message}`);
-		} finally {
-			if (btn) {
-				btn.disabled = false;
-				btn.textContent = 'Generate Full Preview';
-			}
-		}
 	}
 
 	async approveExtraction() {

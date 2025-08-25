@@ -258,6 +258,10 @@ Guidelines:
 				throw new Error('Invalid API key - please check your OpenAI API key');
 			} else if (error.message.includes('429')) {
 				throw new Error('Rate limit exceeded. Please try again later.');
+			} else if (error.message.includes('503')) {
+				throw new Error('OpenAI service is temporarily unavailable. Please try again in a few minutes.');
+			} else if (error.message.includes('500')) {
+				throw new Error('OpenAI server error. Please try again later.');
 			} else if (error.message.includes('insufficient_quota')) {
 				throw new Error('OpenAI API quota exceeded - please check your billing');
 			} else if (error.message.includes('model_not_found')) {
