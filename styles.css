@@ -2820,10 +2820,10 @@ button.mod-warning:hover {
 	-webkit-appearance: none;
 	-moz-appearance: none;
 	appearance: none;
-	width: 14px;
-	height: 14px;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 2px;
+	width: 16px;
+	height: 16px;
+	border: 2px solid var(--background-modifier-border);
+	border-radius: 3px;
 	background: var(--background-primary);
 	cursor: pointer;
 	margin: 0;
@@ -2831,21 +2831,102 @@ button.mod-warning:hover {
 	position: relative;
 	transition: all 0.2s ease;
 	outline: none;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .crystal-card-checkbox:hover {
 	border-color: var(--interactive-accent);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .crystal-card-checkbox:checked {
-	background: var(--interactive-accent);
+	background: white;
+	border-color: var(--interactive-accent);
+	border-width: 2px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark theme checked checkbox */
+.theme-dark .crystal-card-checkbox:checked {
+	background: var(--background-secondary);
 	border-color: var(--interactive-accent);
 }
 
+/* Big plain checkmark for light theme */
+.crystal-card-checkbox:checked::after {
+	content: '✓';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	color: #000000;
+	font-size: 16px;
+	font-weight: 900;
+	line-height: 1;
+	pointer-events: none;
+}
+
+/* Checkmark for dark theme */
+@media (prefers-color-scheme: dark) {
+	.crystal-card-checkbox:checked::after {
+		color: #ffffff;
+	}
+}
+
+/* Support for Obsidian dark themes - big plain white checkmark */
+.theme-dark .crystal-card-checkbox:checked::after {
+	color: #ffffff;
+	font-size: 16px;
+	font-weight: 900;
+}
+
+/* Support for Obsidian light themes - big plain black checkmark */
+.theme-light .crystal-card-checkbox:checked::after {
+	color: #000000;
+	font-size: 16px;
+	font-weight: 900;
+}
+
 .crystal-card-selected {
-	border-color: var(--interactive-accent);
-	background: var(--background-modifier-active-hover);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	border: 1px solid var(--interactive-accent);
+	background: var(--interactive-accent);
+	color: white;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure all text elements in selected cards are white */
+.crystal-card-selected * {
+	color: white !important;
+}
+
+/* Special handling for checkboxes in selected cards - light theme */
+.crystal-card-selected .crystal-card-checkbox {
+	background: white !important;
+	border: 2px solid var(--background-primary) !important;
+}
+
+.crystal-card-selected .crystal-card-checkbox:checked {
+	background: #000000 !important;
+	border: 2px solid #000000 !important;
+}
+
+.crystal-card-selected .crystal-card-checkbox:checked::after {
+	display: none !important;
+}
+
+/* Dark theme checkbox in selected cards */
+.theme-dark .crystal-card-selected .crystal-card-checkbox {
+	background: var(--background-secondary) !important;
+	border: 2px solid var(--background-secondary) !important;
+}
+
+.theme-dark .crystal-card-selected .crystal-card-checkbox:checked {
+	background: #ffffff !important;
+	border: 2px solid #ffffff !important;
+}
+
+.theme-dark .crystal-card-selected .crystal-card-checkbox:checked::after {
+	display: none !important;
 }
 
 /* Bulk Action Modal Styles */
