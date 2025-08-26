@@ -305,14 +305,14 @@ export class SmartExtractionService {
 		lang?: string | null;
 	} | null> {
 		try {
-			console.log(`[DEBUG] extractWithReadability called for: ${url}`);
-			console.log(`[DEBUG] HTML content length: ${html?.length || 0} chars`);
+			
+			
 			
 			// Create browser-compatible document using DOMParser
-			console.log(`[DEBUG] Creating DOMParser and parsing HTML...`);
+			
 			const parser = new DOMParser();
 			const doc = parser.parseFromString(html, 'text/html');
-			console.log(`[DEBUG] Document parsed, title found: ${doc.title || 'none'}`);
+			
 			
 			// Set the URL for relative link resolution
 			if (doc.head && !doc.querySelector('base')) {
@@ -322,29 +322,24 @@ export class SmartExtractionService {
 			}
 			
 			// Note: Skipping isProbablyReaderable check due to Electron compatibility issues
-			console.log('Attempting Readability parsing...');
+			
 			
 			// Parse with Readability
-			console.log(`[DEBUG] Creating Readability instance with options...`);
+			
 			const reader = new Readability(doc, {
 				charThreshold: 200, // Lower threshold for shorter articles
 				debug: true, // Enable Readability debug mode
 				keepClasses: false
 			});
-			console.log(`[DEBUG] Readability instance created, calling parse()...`);
+			...`);
 			
 			const article = reader.parse();
 			
-			console.log(`[DEBUG] Parse completed, result:`, {
-				hasArticle: !!article,
-				title: article?.title || 'none',
-				contentLength: article?.content?.length || 0,
-				textContentLength: article?.textContent?.length || 0,
-				excerpt: article?.excerpt?.substring(0, 100) + '...' || 'none'
+			 + '...' || 'none'
 			});
 			
 			if (article) {
-				console.log(`[DEBUG] Readability extracted article: ${article.title} (${article.length} chars)`);
+				`);
 				return {
 					title: article.title || null,
 					content: article.content || null,
@@ -358,13 +353,11 @@ export class SmartExtractionService {
 				};
 			}
 			
-			console.log(`[DEBUG] Readability parsing failed - no article extracted`);
+			
 			return null;
 		} catch (error) {
-			console.error('[DEBUG] Mozilla Readability extraction failed:', error);
-			console.error('[DEBUG] Error details:', {
-				message: error.message,
-				stack: error.stack?.substring(0, 500)
+			
+			
 			});
 			return null;
 		}
@@ -374,14 +367,13 @@ export class SmartExtractionService {
 	 * Try to scrape URL content using specialized scrapers and Mozilla Readability
 	 */
 	async tryMCPScraping(url: string): Promise<string | null> {
-		console.log(`[DEBUG] Starting tryMCPScraping for URL: ${url}`);
-		console.log(`[DEBUG] URL includes reddit.com: ${url.includes('reddit.com')}`);
+		
+		}`);
 		try {
 			// For Reddit URLs, try the JSON API approach
 			if (url.includes('reddit.com')) {
-				console.log('[DEBUG] Reddit URL detected, attempting JSON API scraping for:', url);
-				console.log(`[DEBUG] URL analysis:`, {
-					isShareUrl: url.includes('/s/'),
+				
+				,
 					isDirectPost: url.includes('/comments/'),
 					urlFormat: url.includes('/s/') ? 'share-url' : url.includes('/comments/') ? 'direct-post' : 'other'
 				});
@@ -389,7 +381,7 @@ export class SmartExtractionService {
 				// Handle Reddit share URLs by expanding them first
 				let actualUrl = url;
 				if (url.includes('/s/')) {
-					console.log('[DEBUG] Reddit share URL detected, attempting to expand...');
+					
 					try {
 						// First, get the actual post URL by following redirect
 						const expandResponse = await requestUrl({
@@ -405,28 +397,28 @@ export class SmartExtractionService {
 							const canonicalMatch = expandResponse.text.match(/<link[^>]*rel="canonical"[^>]*href="([^"]*)"[^>]*>/i);
 							if (canonicalMatch && canonicalMatch[1]) {
 								actualUrl = canonicalMatch[1];
-								console.log(`[DEBUG] Expanded Reddit URL via canonical: ${actualUrl}`);
+								
 							} else {
-								console.log(`[DEBUG] No canonical URL found, trying alternative methods...`);
+								
 								// Try Reddit's special canonical-url-updater div first
 								const canonicalUpdaterMatch = expandResponse.text.match(/<div[^>]*id="canonical-url-updater"[^>]*value="([^"]*)"/i);
 								if (canonicalUpdaterMatch && canonicalUpdaterMatch[1] && canonicalUpdaterMatch[1] !== url) {
 									actualUrl = canonicalUpdaterMatch[1];
-									console.log(`[DEBUG] Expanded Reddit URL via canonical-url-updater div: ${actualUrl}`);
+									
 								} else {
 									// Try og:url meta tag
 									const ogUrlMatch = expandResponse.text.match(/<meta[^>]*property="og:url"[^>]*content="([^"]*)"/i);
 									if (ogUrlMatch && ogUrlMatch[1] && ogUrlMatch[1] !== url) {
 										actualUrl = ogUrlMatch[1];
-										console.log(`[DEBUG] Expanded Reddit URL via og:url: ${actualUrl}`);
+										
 									} else {
-										console.log(`[DEBUG] No canonical URL found via any method, will proceed with original URL`);
+										
 									}
 								}
 							}
 						}
 					} catch (expandError) {
-						console.log(`[DEBUG] Failed to expand Reddit share URL: ${expandError.message}`);
+						
 					}
 				}
 				
@@ -435,7 +427,7 @@ export class SmartExtractionService {
 				if (!jsonUrl.endsWith('.json')) {
 					jsonUrl = actualUrl.replace(/\/$/, '') + '.json';
 				}
-				console.log(`[DEBUG] Reddit JSON URL: ${jsonUrl}`);
+				
 				
 				try {
 					const jsonResponse = await requestUrl({
@@ -448,21 +440,18 @@ export class SmartExtractionService {
 					
 					if (jsonResponse.status === 200) {
 						const data = jsonResponse.json;
-						console.log('[DEBUG] Reddit JSON API successful, data structure:', typeof data);
-						console.log('Reddit JSON API successful');
+						
+						
 						
 						// Extract post data
-						console.log(`[DEBUG] Checking data structure:`, {
-							hasData: !!data,
-							isArray: Array.isArray(data),
+						,
 							firstElement: data?.[0] ? 'present' : 'missing',
 							hasChildren: data?.[0]?.data?.children ? 'present' : 'missing'
 						});
 						
 						if (data && data[0] && data[0].data && data[0].data.children) {
 							const post = data[0].data.children[0].data;
-							console.log(`[DEBUG] Reddit post found:`, {
-								title: post.title?.substring(0, 100),
+							,
 								author: post.author,
 								subreddit: post.subreddit,
 								hasContent: !!post.selftext
@@ -502,27 +491,23 @@ export class SmartExtractionService {
 							}
 							
 							if (content.length > 100) {
-								console.log(`[DEBUG] Reddit JSON extracted ${content.length} characters of content`);
-								console.log(`[DEBUG] Content preview:`, content.substring(0, 200) + '...');
-								console.log(`Reddit JSON extracted ${content.length} characters of content`);
+								
+								 + '...');
+								
 								return content;
 							} else {
-								console.log(`[DEBUG] Reddit content too short (${content.length} chars), falling back`);
+								, falling back`);
 							}
 						}
 					}
 				} catch (jsonError) {
-					console.log(`[DEBUG] Reddit JSON API failed:`, {
-						status: jsonError.status || 'unknown',
-						message: jsonError.message,
-						url: jsonUrl
-					});
-					console.log('Reddit JSON API failed, falling back to HTML scraping:', jsonError.message);
+					
+					
 				}
 			}
 
 			// Step 2: Try Mozilla Readability for all URLs (including Reddit if JSON failed)
-			console.log('Attempting Mozilla Readability extraction for:', url);
+			
 			
 			let response;
 			try {
@@ -536,34 +521,32 @@ export class SmartExtractionService {
 			} catch (requestError) {
 				// Handle network errors and HTTP errors gracefully
 				if (requestError.status === 404) {
-					console.log(`[DEBUG] URL returned 404 Not Found: ${url}`);
+					
 					return null;  // Return null instead of throwing
 				} else if (requestError.status >= 400 && requestError.status < 500) {
-					console.log(`[DEBUG] Client error ${requestError.status} for URL: ${url}`);
+					
 					return null;  // Return null instead of throwing
 				} else if (requestError.status >= 500) {
-					console.log(`[DEBUG] Server error ${requestError.status} for URL: ${url}`);
+					
 					return null;  // Return null instead of throwing
 				} else {
-					console.log(`[DEBUG] Network error for URL: ${url}`, requestError);
+					
 					return null;  // Return null instead of throwing
 				}
 			}
 
 			if (response.status !== 200) {
-				console.log(`[DEBUG] Unexpected status ${response.status} for URL: ${url}`);
+				
 				throw new Error(`HTTP ${response.status}`)
 			}
 
-			console.log(`[DEBUG] Response received (${response.status}), content length: ${response.text?.length || 0} chars`);
+			, content length: ${response.text?.length || 0} chars`);
 			
 			// Use Mozilla Readability for content extraction
-			console.log(`[DEBUG] Calling extractWithReadability for URL: ${url}`);
+			
 			const readabilityResult = await this.extractWithReadability(url, response.text);
 			
-			console.log(`[DEBUG] Readability result:`, {
-				hasResult: !!readabilityResult,
-				hasTextContent: !!(readabilityResult?.textContent),
+			,
 				title: readabilityResult?.title,
 				contentLength: readabilityResult?.textContent?.length || 0,
 				excerptLength: readabilityResult?.excerpt?.length || 0
@@ -600,20 +583,20 @@ export class SmartExtractionService {
 				// Add main content
 				content += `Content: ${readabilityResult.textContent}`;
 				
-				console.log(`[DEBUG] Content built successfully, total length: ${content.length} chars`);
-				console.log(`[DEBUG] Content preview:`, content.substring(0, 300) + '...');
+				
+				 + '...');
 				
 				// Limit content size for API efficiency
 			if (content.length > 4000) {
 				content = content.substring(0, 4000) + '\n\n[Content truncated for length]';
-					console.log(`[DEBUG] Content truncated to ${content.length} chars`);
+					
 				}
 				
-				console.log(`[DEBUG] Mozilla Readability extracted ${content.length} characters of clean content`);
+				
 				return content;
 			}
 			
-			console.log(`[DEBUG] Mozilla Readability failed - no usable content extracted`);
+			
 			return null;
 			
 		} catch (error) {
@@ -643,7 +626,7 @@ export class SmartExtractionService {
 	 * Process YouTube video using enhanced Innertube API
 	 */
 	private async processYouTubeVideo(url: string): Promise<string> {
-		console.log(`[DEBUG] Processing YouTube video with Enhanced Innertube approach: ${url}`);
+		
 		try {
 			const videoId = this.extractVideoId(url);
 			if (!videoId) {
@@ -666,12 +649,12 @@ export class SmartExtractionService {
 				this.urlCache.set(url, { content: summary, timestamp: Date.now() });
 			}
 			
-			console.log(`[DEBUG] Analysis completed with enhanced formatting`);
-			console.log(`Successfully processed YouTube video: ${url}`);
+			
+			
 			return summary;
 		} catch (error) {
-			console.error(`[DEBUG] YouTube processing failed for ${url}:`, error);
-			console.log(`YouTube processing failed for ${url}, falling back to generic extraction`);
+			
+			
 			return '';
 		}
 	}
@@ -1051,7 +1034,7 @@ export class SmartExtractionService {
 			index === self.findIndex(u => u.url === url.url)
 		).slice(0, 8);
 		
-		console.log(`[DEBUG] Generated ${uniqueUrls.length} tool URLs for: ${tools.join(', ')}`);
+		}`);
 		
 		return uniqueUrls;
 	}
@@ -1211,7 +1194,7 @@ export class SmartExtractionService {
 		// Step 3: Generate additional research URLs for questions
 		let additionalSearchUrls: Array<{ url: string; title: string }> = [];
 		if (aiAnalysis.suggestedSearchQueries && aiAnalysis.suggestedSearchQueries.length > 0) {
-			console.log('Detected question with search queries:', aiAnalysis.suggestedSearchQueries);
+			
 			for (const query of aiAnalysis.suggestedSearchQueries.slice(0, 3)) {
 				const searchUrls = await this.searchGoogleForUrls(query, 2);
 				additionalSearchUrls.push(...searchUrls);
@@ -1349,7 +1332,7 @@ export class SmartExtractionService {
 	 * Fetch and summarize URL content
 	 */
 	private async fetchAndSummarizeURL(url: string): Promise<string> {
-		console.log(`[DEBUG] ==== fetchAndSummarizeURL called for: ${url} ====`);
+		
 		try {
 			// Check cache first
 			const cacheKey = url;
@@ -1357,24 +1340,24 @@ export class SmartExtractionService {
 			const cacheExpiry = (this.plugin.settings.cacheDurationHours || 24) * 60 * 60 * 1000;
 			
 			if (cached && (Date.now() - cached.timestamp) < cacheExpiry) {
-				console.log('[DEBUG] Using cached URL content for:', url);
+				
 				return cached.content;
 			}
 			
-			console.log(`[DEBUG] No valid cache found, proceeding with fresh extraction`);
+			
 			
 			// Check if this is a YouTube URL and handle it specially
 			if (this.isYouTubeURL(url)) {
-				console.log(`[DEBUG] YouTube URL detected, routing to YouTube processing: ${url}`);
+				
 				return await this.processYouTubeVideo(url);
 			}
 
 			// Try MCP-based scraping first for better content extraction
-			console.log(`[DEBUG] Step 1: Attempting MCP-based scraping...`);
+			
 			const mcpContent = await this.tryMCPScraping(url);
 			if (mcpContent) {
-				console.log(`[DEBUG] Step 1 SUCCESS: MCP scraping extracted ${mcpContent.length} chars`);
-				console.log(`Successfully scraped ${url} using MCP servers`);
+				
+				
 				const summary = await this.openAIService.summarizeURL(url, mcpContent);
 				
 				// Cache the summary
@@ -1385,9 +1368,9 @@ export class SmartExtractionService {
 				return summary;
 		}
 
-		console.log(`[DEBUG] Step 1 FAILED: MCP scraping returned null, trying fallback methods`);
-		console.log(`[DEBUG] Step 2: Fetching URL content directly...`);
-		console.log('Fetching URL content:', url);
+		
+		
+		
 			
 			// Fetch URL content
 			const response = await requestUrl({
@@ -1403,20 +1386,20 @@ export class SmartExtractionService {
 			}
 
 			// Try Mozilla Readability as final fallback
-			console.log(`[DEBUG] Step 3: Attempting Mozilla Readability as fallback...`);
-			console.log('Attempting fallback Mozilla Readability extraction for:', url);
+			
+			
 			const readabilityResult = await this.extractWithReadability(url, response.text);
 			
 			let content = '';
 			if (readabilityResult && readabilityResult.textContent) {
 				// Use clean readability content
 				content = readabilityResult.textContent;
-				console.log(`Fallback Readability extracted ${content.length} characters`);
+				
 			} else {
 				// Ultimate fallback: basic HTML stripping
-				console.log(`[DEBUG] Step 3 FAILED: Mozilla Readability returned null`);
-				console.log(`[DEBUG] Step 4: Using basic HTML stripping as ultimate fallback`);
-				console.log('Using basic HTML stripping as ultimate fallback');
+				
+				
+				
 				content = response.text;
 				content = content.replace(/<script[^>]*>.*?<\/script>/gi, '');
 				content = content.replace(/<style[^>]*>.*?<\/style>/gi, '');
@@ -1533,7 +1516,7 @@ export class SmartExtractionService {
 			}
 
 			// Step 3: Analyze all tasks with AI
-			console.log(`Generating full preview for ${extractedTasks.length} tasks...`);
+			
 			progressCallback?.(20, `Starting AI analysis of ${extractedTasks.length} tasks...`);
 			
 			const smartCards: SmartCard[] = [];

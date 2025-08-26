@@ -58,28 +58,28 @@ export class DashboardDragDropHandler {
 			};
 		});
 		
-		console.log('Made board draggable:', board.id);
+		
 	}
 
 	private handleDragStart(event: DragEvent): void {
-		console.log('Board drag start triggered', event.target);
+		
 		const target = event.target as HTMLElement;
 		const boardCard = target.closest('.crystal-board-card') as HTMLElement;
 		
 		// Don't start drag if clicking on action buttons
 		if (target.closest('.crystal-board-actions')) {
-			console.log('Drag prevented - action button clicked');
+			
 			event.preventDefault();
 			return;
 		}
 		
 		if (!boardCard || !boardCard.hasAttribute('data-board-id')) {
-			console.log('Drag prevented - no valid board card');
+			
 			return;
 		}
 		
 		const boardId = boardCard.getAttribute('data-board-id');
-		console.log('Starting drag for board:', boardId);
+		
 
 		this.draggedBoardId = boardId;
 		this.draggedElement = boardCard;
@@ -94,7 +94,7 @@ export class DashboardDragDropHandler {
 		if (event.dataTransfer) {
 			event.dataTransfer.effectAllowed = 'move';
 			event.dataTransfer.setData('text/plain', this.draggedBoardId || '');
-			console.log('Drag data set successfully');
+			
 		}
 
 		// Add visual indicators to drop zones
@@ -110,11 +110,11 @@ export class DashboardDragDropHandler {
 		this.placeholder.removeAttribute('data-board-id');
 		this.placeholder.style.pointerEvents = 'none';
 		this.placeholder.setAttribute('draggable', 'false');
-		console.log('Placeholder created:', this.placeholder);
+		
 	}
 
 	private handleDragEnd(event: DragEvent): void {
-		console.log('Board drag end triggered');
+		
 		const target = event.target as HTMLElement;
 		target.classList.remove('crystal-board-dragging');
 		
@@ -183,15 +183,15 @@ export class DashboardDragDropHandler {
 			const rect = boardCard.getBoundingClientRect();
 			const centerX = rect.left + rect.width / 2;
 			
-			console.log('Updating placeholder position, mouse X:', event.clientX, 'center X:', centerX);
+			
 			
 			if (event.clientX < centerX) {
 				// Insert before
-				console.log('Inserting placeholder before board card');
+				
 				boardCard.parentNode?.insertBefore(this.placeholder, boardCard);
 			} else {
 				// Insert after
-				console.log('Inserting placeholder after board card');
+				
 				if (boardCard.nextSibling) {
 					boardCard.parentNode?.insertBefore(this.placeholder, boardCard.nextSibling);
 				} else {
@@ -200,7 +200,7 @@ export class DashboardDragDropHandler {
 			}
 		} else {
 			// If not over a board card, append to end of grid
-			console.log('Inserting placeholder at end of grid');
+			
 			boardsGrid.appendChild(this.placeholder);
 		}
 	}
@@ -209,7 +209,7 @@ export class DashboardDragDropHandler {
 		if (!this.draggedBoardId || !this.placeholder) return;
 
 		event.preventDefault();
-		console.log('Board drop event triggered');
+		
 
 		const boardsGrid = event.currentTarget as HTMLElement;
 		boardsGrid.classList.remove('crystal-drop-zone-hover');
@@ -221,8 +221,8 @@ export class DashboardDragDropHandler {
 		const allChildren = Array.from(boardsGrid.children);
 		const placeholderIndex = allChildren.indexOf(this.placeholder);
 		
-		console.log('Placeholder index:', placeholderIndex);
-		console.log('All cards count:', allCards.length);
+		
+		
 
 		// Build new order array by inserting dragged board at placeholder position
 		const newOrder: string[] = [];
@@ -237,7 +237,7 @@ export class DashboardDragDropHandler {
 				if (this.draggedBoardId) {
 					newOrder.push(this.draggedBoardId);
 					insertedDraggedBoard = true;
-					console.log('Inserted dragged board at position:', i);
+					
 				}
 			} else if (child.classList.contains('crystal-board-card') && 
 					   !child.classList.contains('crystal-board-dragging')) {
@@ -252,10 +252,10 @@ export class DashboardDragDropHandler {
 		// Fallback: if dragged board wasn't inserted yet, add it at the end
 		if (!insertedDraggedBoard && this.draggedBoardId) {
 			newOrder.push(this.draggedBoardId);
-			console.log('Added dragged board at end as fallback');
+			
 		}
 
-		console.log('New board order:', newOrder);
+		
 
 		try {
 			// Update the order in data manager
@@ -264,7 +264,7 @@ export class DashboardDragDropHandler {
 			// Re-render the dashboard
 			await this.dashboardView.renderDashboard();
 			
-			console.log('Board reordering completed successfully');
+			
 		} catch (error) {
 			console.error('Error reordering boards:', error);
 		}

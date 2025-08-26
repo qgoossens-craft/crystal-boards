@@ -15,7 +15,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 	smartExtractionService: SmartExtractionService;
 	todoAIService: TodoAIService;
 		async onload() {
-		console.log('Loading Crystal Boards plugin');
+		
 
 		// Initialize data manager
 		this.dataManager = new DataManager(this);
@@ -112,7 +112,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 	}
 
 	onunload() {
-		console.log('Unloading Crystal Boards plugin');
+		
 		
 
 	}
@@ -156,8 +156,8 @@ export default class CrystalBoardsPlugin extends Plugin {
 					file instanceof TFile && 
 					file.path === this.settings.taskSourcePath) {
 					
-					console.log(`[DEBUG] Task source file modified: ${file.path}, triggering update...`);
-					console.log(`[DEBUG] Current settings path: ${this.settings.taskSourcePath}`);
+					
+					
 					
 					// Debounce to avoid multiple rapid updates
 					if (this.taskSourceUpdateTimeout) {
@@ -180,18 +180,18 @@ export default class CrystalBoardsPlugin extends Plugin {
 	 */
 	private async updateBoardsFromTaskSource(): Promise<void> {
 		try {
-			console.log('Task source file changed, updating boards...');
+			
 			
 			// Get current task counts from source
 			const stats = await this.taskExtractionService.getExtractionStats();
-			console.log(`[DEBUG] Current stats - Tasks in source: ${stats.tasksInSource}, File exists: ${stats.sourceFileExists}`);
+			
 			
 			// Update dashboard if it's open
 			const dashboardLeaves = this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE);
-			console.log(`[DEBUG] Found ${dashboardLeaves.length} open dashboard leaves`);
+			
 			for (const leaf of dashboardLeaves) {
 				if (leaf.view instanceof DashboardView) {
-					console.log('[DEBUG] Updating dashboard view...');
+					
 					await leaf.view.renderDashboard();
 				}
 			}
@@ -204,7 +204,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 				}
 			}
 			
-			console.log(`Boards updated: ${stats.tasksInSource} tasks in source file`);
+			
 		} catch (error) {
 			console.error('Error updating boards from task source:', error);
 		}
@@ -287,14 +287,14 @@ export default class CrystalBoardsPlugin extends Plugin {
 	private setupAccentColorListener(): void {
 		// Store current accent color to detect changes
 		let currentAccentColor = this.getCurrentAccentColor();
-		console.log('🎨 Crystal Boards: Initial accent color detected:', currentAccentColor);
+		
 		
 		// Use periodic checking to detect accent color changes
 		this.registerInterval(
 			window.setInterval(() => {
 				const newAccentColor = this.getCurrentAccentColor();
 				if (newAccentColor !== currentAccentColor && newAccentColor) {
-					console.log('🎨 Crystal Boards: Accent color changed from', currentAccentColor, 'to', newAccentColor);
+					
 					currentAccentColor = newAccentColor;
 					this.refreshAllViews();
 				}
@@ -332,7 +332,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 		dashboardLeaves.forEach(async (leaf) => {
 			const view = leaf.view as DashboardView;
 			if (view && typeof view.renderDashboard === 'function') {
-				console.log('🔄 Refreshing dashboard view for accent color change');
+				
 				await view.renderDashboard();
 			}
 		});
@@ -342,7 +342,7 @@ export default class CrystalBoardsPlugin extends Plugin {
 		boardLeaves.forEach(async (leaf) => {
 			const view = leaf.view as BoardView;
 			if (view && typeof view.renderBoard === 'function') {
-				console.log('🔄 Refreshing board view for accent color change');
+				
 				await view.renderBoard();
 			}
 		});

@@ -218,22 +218,22 @@ export class TaskExtractionService {
 
 		try {
 			if (this.plugin.settings.taskSourcePath) {
-				console.log(`[DEBUG] Getting stats for task source: ${this.plugin.settings.taskSourcePath}`);
+				
 				const sourceFile = this.app.vault.getAbstractFileByPath(this.plugin.settings.taskSourcePath);
 				
 				if (sourceFile) {
 					stats.sourceFileExists = true;
 					const content = await this.app.vault.read(sourceFile as any);
-					console.log(`[DEBUG] File content length: ${content.length} characters`);
+					
 					const tasks = this.extractor.parseTasksFromContent(content);
 					const tasksWithHashtags = tasks.filter(task => task.hasHashtags);
-					console.log(`[DEBUG] Parsed ${tasks.length} total tasks (${tasksWithHashtags.length} with hashtags) from content`);
+					
 					stats.tasksInSource = tasks.length; // Count all tasks
 				} else {
-					console.log('[DEBUG] Task source file not found');
+					
 				}
 			} else {
-				console.log('[DEBUG] No task source path configured');
+				
 			}
 		} catch (error) {
 			console.error('Error getting extraction stats:', error);

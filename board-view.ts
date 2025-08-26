@@ -64,7 +64,7 @@ export class BoardView extends ItemView {
 		legacySelectors.forEach(selector => {
 			const elements = document.querySelectorAll(selector);
 			elements.forEach(element => {
-				console.log(`Removing legacy element: ${selector}`);
+				
 				element.remove();
 			});
 		});
@@ -74,7 +74,7 @@ export class BoardView extends ItemView {
 		allFixedElements.forEach(element => {
 			const text = element.textContent?.trim();
 			if (text && text.includes('px') && text.includes('|')) {
-				console.log(`Removing lingering tooltip with text: ${text}`);
+				
 				element.remove();
 			}
 		});
@@ -98,7 +98,7 @@ export class BoardView extends ItemView {
 		legacySelectors.forEach(selector => {
 			const elements = document.querySelectorAll(selector);
 			elements.forEach(element => {
-				console.log(`Removing legacy element: ${selector}`);
+				
 				element.remove();
 			});
 		});
@@ -108,7 +108,7 @@ export class BoardView extends ItemView {
 		allFixedElements.forEach(element => {
 			const text = element.textContent?.trim();
 			if (text && text.includes('px') && text.includes('|')) {
-				console.log(`Removing lingering tooltip with text: ${text}`);
+				
 				element.remove();
 			}
 		});
@@ -131,7 +131,7 @@ export class BoardView extends ItemView {
 		}
 		
 		nodesToRemove.forEach(element => {
-			console.log(`Removing element with pattern text: ${element.textContent}`);
+			
 			element.remove();
 		});
 	}
@@ -139,7 +139,7 @@ export class BoardView extends ItemView {
 	async onClose(): Promise<void> {
 		this.dragDropManager.disableDragAndDrop();
 		
-		console.log('🧹 Cleaning up CSS Grid resize observers');
+		
 		
 		// Cleanup resize observers
 		if (this.resizeObserver) {
@@ -357,11 +357,11 @@ export class BoardView extends ItemView {
 	private applyResponsiveColumnSizing(columnsContainer: HTMLElement, columnCount: number): void {
 		// Ensure we have a valid container and column count
 		if (!columnsContainer || columnCount === 0) {
-			console.log('❌ No valid container or columns');
+			
 			return;
 		}
 
-		console.log(`🎯 Setting grid columns: ${columnCount} columns with equal distribution`);
+		
 		
 		// Set CSS custom property for grid-template-columns
 		columnsContainer.style.setProperty('--column-count', columnCount.toString());
@@ -372,14 +372,14 @@ export class BoardView extends ItemView {
 		const totalMinWidth = columnCount * minColumnWidth + (columnCount - 1) * 16; // 16px gap
 		
 		if (containerWidth < totalMinWidth) {
-			console.log('📱 Switching to horizontal scroll for narrow screen');
+			
 			columnsContainer.style.gridTemplateColumns = `repeat(${columnCount}, ${minColumnWidth}px)`;
 		} else {
-			console.log('🖥️ Using equal distribution grid layout');
+			
 			columnsContainer.style.gridTemplateColumns = `repeat(${columnCount}, 1fr)`;
 		}
 
-		console.log(`✅ Applied CSS Grid: ${columnCount} columns, container: ${containerWidth.toFixed(0)}px`);
+		
 	}
 
 	/**
@@ -395,7 +395,7 @@ export class BoardView extends ItemView {
 	 * Setup simple resize handling for CSS Grid layout
 	 */
 	private setupResponsiveResize(columnsContainer: HTMLElement): void {
-		console.log('🔧 Setting up CSS Grid responsive layout');
+		
 		
 		// Clean up existing observers
 		if (this.resizeObserver) {
@@ -452,7 +452,7 @@ export class BoardView extends ItemView {
 	 * Force immediate column sizing refresh - can be called manually
 	 */
 	public forceColumnResize(): void {
-		console.log('🔄 Forcing column resize...');
+		
 		const columnsContainer = this.contentEl.querySelector('.crystal-board-columns') as HTMLElement;
 		if (columnsContainer) {
 			const columnCount = this.board.columns.length;
@@ -730,7 +730,7 @@ export class BoardView extends ItemView {
 		let previewEl: HTMLElement | null = null;
 		
 		element.addEventListener('mouseenter', () => {
-			console.log('Mouse entered note link:', file.basename);
+			
 			
 			if (hoverTimeout) {
 				clearTimeout(hoverTimeout);
@@ -738,7 +738,7 @@ export class BoardView extends ItemView {
 			
 			hoverTimeout = setTimeout(async () => {
 				try {
-					console.log('Creating preview for:', file.basename);
+					
 					const content = await this.app.vault.read(file);
 					// Show full content for scrolling
 					let previewContent = content;
@@ -814,11 +814,11 @@ export class BoardView extends ItemView {
 					
 					// Add hover events to keep preview open when mouse is over it
 					previewEl.addEventListener('mouseenter', () => {
-						console.log('Mouse entered preview');
+						
 					});
 					
 					previewEl.addEventListener('mouseleave', () => {
-						console.log('Mouse left preview');
+						
 						setTimeout(() => {
 							if (previewEl) {
 								previewEl.remove();
@@ -827,7 +827,7 @@ export class BoardView extends ItemView {
 						}, 100);
 					});
 					
-					console.log('Preview created and positioned');
+					
 					
 				} catch (error) {
 					console.error('Error reading note for preview:', error);
@@ -859,11 +859,11 @@ export class BoardView extends ItemView {
 					
 					// Add hover events to error preview as well
 					previewEl.addEventListener('mouseenter', () => {
-						console.log('Mouse entered error preview');
+						
 					});
 					
 					previewEl.addEventListener('mouseleave', () => {
-						console.log('Mouse left error preview');
+						
 						setTimeout(() => {
 							if (previewEl) {
 								previewEl.remove();
@@ -876,7 +876,7 @@ export class BoardView extends ItemView {
 		});
 		
 		element.addEventListener('mouseleave', () => {
-			console.log('Mouse left note link:', file.basename);
+			
 			
 			if (hoverTimeout) {
 				clearTimeout(hoverTimeout);
@@ -1306,14 +1306,14 @@ export class BoardView extends ItemView {
 	private setupAccentColorListener(): void {
 		// Store current accent color to detect changes
 		let currentAccentColor = this.getCurrentAccentColor();
-		console.log('🎨 Board View: Initial accent color detected:', currentAccentColor);
+		
 		
 		// Note: We rely primarily on the main plugin's global listener
 		// This is just a lightweight backup check for this specific view
 		const checkAccentColor = () => {
 			const newAccentColor = this.getCurrentAccentColor();
 			if (newAccentColor !== currentAccentColor && newAccentColor) {
-				console.log('🎨 Board View: Accent color changed from', currentAccentColor, 'to', newAccentColor);
+				
 				currentAccentColor = newAccentColor;
 				this.renderBoard(); // Refresh this board view
 			}

@@ -346,7 +346,7 @@ export class DashboardView extends ItemView {
 		// Show extraction stats/info
 		try {
 			const stats = await this.plugin.taskExtractionService.getExtractionStats();
-			console.log(`[DEBUG] Dashboard displaying stats: ${stats.tasksInSource} tasks available`);
+			
 			if (stats.tasksInSource > 0) {
 				const infoEl = footerEl.createEl('span', { 
 					cls: 'crystal-extract-info',
@@ -354,10 +354,10 @@ export class DashboardView extends ItemView {
 				});
 				infoEl.title = `Found ${stats.tasksInSource} tasks in ${this.plugin.settings.taskSourcePath}`;
 			} else {
-				console.log('[DEBUG] No tasks to display in dashboard footer');
+				
 			}
 		} catch (error) {
-			console.error('[DEBUG] Error getting stats for dashboard:', error);
+			
 		}
 	}
 

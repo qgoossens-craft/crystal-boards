@@ -135,10 +135,10 @@ export class TodoAIService {
 			// If no existing summary, try to get one for the first URL
 			if (!aiSummary && detectedUrls.length > 0) {
 				const primaryUrl = detectedUrls[0];
-				console.log('Getting AI summary for URL:', primaryUrl.url);
+				
 				aiSummary = (await this.getAISummaryForUrl(primaryUrl.url, todo.text)) || undefined;
 			} else if (aiSummary) {
-				console.log('Using existing AI summary from smart extract');
+				
 			}
 			
 			if (aiSummary) {
@@ -151,7 +151,7 @@ export class TodoAIService {
 				
 				if (urlWithDescription && urlWithDescription.description) {
 					// Create a note using the URL's existing description
-					console.log('Using URL description for note creation');
+					
 					try {
 						// Create a pseudo AI summary from the URL description
 						const pseudoSummary: AISummary = {
@@ -184,7 +184,7 @@ export class TodoAIService {
 				}
 				
 				// Final fallback: create a basic note with just URL info
-				console.log('URL content fetch failed, creating basic note with URL info');
+				
 				try {
 					const basicNote = await this.createBasicNoteFromUrl(
 						todo.text,
@@ -250,10 +250,10 @@ export class TodoAIService {
 			// Fetch content and summarize
 			const content = await this.fetchUrlContent(url);
 			if (!content) {
-				console.log(`No content fetched for URL: ${url}`);
+				
 				return null;
 			}
-			console.log(`Fetched ${content.length} characters for URL: ${url}`);
+			
 
 			// Create context-aware prompt
 			const prompt = `You are analyzing a URL found in a task/todo item. Provide a focused summary that helps with task completion.
@@ -310,7 +310,7 @@ Summary:`;
 		}
 		
 		try {
-			console.log(`Fetching content for URL: ${url}`);
+			
 			
 			// Try to use the smart extraction service's URL scraping
 			if (this.plugin.smartExtractionService) {
@@ -319,7 +319,7 @@ Summary:`;
 					try {
 						const content = await smartService.tryMCPScraping(url);
 						if (content && content.length > 100) {
-							console.log(`Smart extraction fetched ${content.length} chars`);
+							
 							return content.substring(0, 3000); // Limit for AI processing
 						}
 					} catch (mcpError) {
@@ -366,17 +366,17 @@ Summary:`;
 			const urlObj = new URL(url);
 			// Check for valid protocols
 			if (!['http:', 'https:'].includes(urlObj.protocol)) {
-				console.log(`Invalid protocol for URL: ${url}`);
+				
 				return false;
 			}
 			// Check for valid hostname
 			if (!urlObj.hostname || urlObj.hostname.length < 3) {
-				console.log(`Invalid hostname for URL: ${url}`);
+				
 				return false;
 			}
 			return true;
 		} catch (error) {
-			console.log(`Invalid URL format: ${url}`);
+			
 			return false;
 		}
 	}
@@ -532,7 +532,7 @@ Summary:`;
 			// Create the note
 			const file = await this.plugin.app.vault.create(fullPath, noteContent);
 			
-			console.log(`Created AI summary note: ${file.path}`);
+			
 			return file;
 
 		} catch (error) {

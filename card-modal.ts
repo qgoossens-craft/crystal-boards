@@ -78,7 +78,7 @@ export class CardModal extends Modal {
 	 */
 	private async discoverAndUpdateLinkedNotes(): Promise<void> {
 		try {
-			console.log('Discovering notes in card folder structure...');
+			
 			
 			// Get the board to determine folder structure
 			const board = this.plugin.dataManager.getBoardById(this.boardId);
@@ -92,12 +92,12 @@ export class CardModal extends Modal {
 			const kanbanFolder = this.plugin.settings.kanbanFolderPath || 'Kanban';
 			const cardFolderPath = `${kanbanFolder}/${board.name}/${sanitizedCardTitle}`;
 			
-			console.log('Searching for notes in folder:', cardFolderPath);
+			
 
 			// Check if the card's folder exists
 			const folderExists = await this.app.vault.adapter.exists(cardFolderPath);
 			if (!folderExists) {
-				console.log('Card folder does not exist yet:', cardFolderPath);
+				
 				return;
 			}
 
@@ -109,7 +109,7 @@ export class CardModal extends Modal {
 				filePath.endsWith('.md')
 			);
 
-			console.log(`Found ${markdownFiles.length} markdown files in card folder`);
+			
 
 			// Add discovered notes to cardNoteLinks if they're not already there
 			let newNotesFound = 0;
@@ -117,7 +117,7 @@ export class CardModal extends Modal {
 				if (!this.cardNoteLinks.includes(filePath)) {
 					this.cardNoteLinks.push(filePath);
 					newNotesFound++;
-					console.log('Discovered new note:', filePath);
+					
 				}
 			}
 
@@ -132,16 +132,16 @@ export class CardModal extends Modal {
 						const index = this.cardNoteLinks.indexOf(linkPath);
 						if (index > -1) {
 							this.cardNoteLinks.splice(index, 1);
-							console.log('Removed non-existent note from card folder:', linkPath);
+							
 						}
 					}
 				}
 			}
 
 			if (newNotesFound > 0) {
-				console.log(`Discovery complete: ${newNotesFound} new notes found and added`);
+				
 			} else {
-				console.log('Discovery complete: no new notes found');
+				
 			}
 
 		} catch (error) {
@@ -655,7 +655,7 @@ You can include:
 	}
 
 	private updateNotesDisplay(container: HTMLElement): void {
-		console.log('Updating notes display, cardNoteLinks count:', this.cardNoteLinks.length);
+		
 		container.empty();
 		
 		if (this.cardNoteLinks.length === 0) {
@@ -668,7 +668,7 @@ You can include:
 
 		this.cardNoteLinks.forEach((notePath, index) => {
 			const file = this.app.vault.getAbstractFileByPath(notePath);
-			console.log(`Processing note ${index + 1}:`, notePath, 'File found:', !!file);
+			
 			
 			if (file instanceof TFile) {
 				const noteEl = container.createEl('div', { cls: 'crystal-linked-note' });
@@ -697,7 +697,7 @@ You can include:
 			}
 		});
 		
-		console.log('Notes display updated successfully');
+		
 	}
 
 	/**
@@ -710,7 +710,7 @@ You can include:
 				return;
 			}
 
-			console.log('Deleting linked note:', file.path);
+			
 
 			// Remove from cardNoteLinks
 			const index = this.cardNoteLinks.indexOf(file.path);
@@ -725,7 +725,7 @@ You can include:
 			this.updateNotesDisplay(container);
 			
 			new Notice(`🗑️ Deleted note: ${file.basename}`);
-			console.log('Note deleted successfully:', file.path);
+			
 
 		} catch (error) {
 			console.error('Error deleting linked note:', error);
@@ -955,7 +955,7 @@ You can include:
 	 */
 	private async createLinkedNote(): Promise<void> {
 		try {
-			console.log('Creating linked note...');
+			
 			
 			// Get the board to determine folder structure
 			const board = this.plugin.dataManager.getBoardById(this.boardId);
@@ -964,15 +964,15 @@ You can include:
 				console.error('Board not found for ID:', this.boardId);
 				return;
 			}
-			console.log('Board found:', board.name);
+			
 
 			// Prompt user for note title using Obsidian's native modal
 			const title = await this.promptForTitle();
 			if (!title) {
-				console.log('User cancelled note creation');
+				
 				return; // User cancelled
 			}
-			console.log('Note title entered:', title);
+			
 
 			// Sanitize title for file system
 			const sanitizedTitle = this.sanitizeFileName(title);
@@ -981,14 +981,14 @@ You can include:
 			// Create folder path: Kanban/BoardName/CardName/
 			const kanbanFolder = this.plugin.settings.kanbanFolderPath || 'Kanban';
 			const folderPath = `${kanbanFolder}/${board.name}/${sanitizedCardTitle}`;
-			console.log('Creating folder path:', folderPath);
+			
 			
 			// Ensure folder exists
 			await this.ensureFolderExists(folderPath);
 
 			// Create note path
 			const notePath = `${folderPath}/${sanitizedTitle}.md`;
-			console.log('Creating note at path:', notePath);
+			
 			
 			// Check if file already exists
 			if (this.app.vault.getAbstractFileByPath(notePath)) {
@@ -999,24 +999,24 @@ You can include:
 			// Create the note with basic content
 			const noteContent = this.generateNoteContent(title, board.name);
 			const file = await this.app.vault.create(notePath, noteContent);
-			console.log('Note created successfully:', file.path);
+			
 
 			// Wait a moment for file system to sync
 			await new Promise(resolve => setTimeout(resolve, 100));
 
 			// Add to linked notes
 			this.cardNoteLinks.push(notePath);
-			console.log('Added to cardNoteLinks, new count:', this.cardNoteLinks.length);
+			
 
 			// Update the notes display - find it within this modal's content
 			const modalContent = this.contentEl;
 			let notesDisplay = modalContent.querySelector('.crystal-notes-display') as HTMLElement;
 			
-			console.log('Notes display element found:', !!notesDisplay);
+			
 			
 			if (notesDisplay) {
 				this.updateNotesDisplay(notesDisplay);
-				console.log('Notes display updated');
+				
 			} else {
 				console.warn('Could not find notes display element, trying force refresh');
 				// Force a re-render of the entire notes section
@@ -1052,7 +1052,7 @@ You can include:
 						const notesDisplay = section.querySelector('.crystal-notes-display');
 						if (notesDisplay) {
 							this.updateNotesDisplay(notesDisplay as HTMLElement);
-							console.log('Force refresh: Notes display updated via section search');
+							
 							return;
 						}
 					}
@@ -1063,7 +1063,7 @@ You can include:
 			const notesDisplay = modalContent.querySelector('.crystal-notes-display');
 			if (notesDisplay) {
 				this.updateNotesDisplay(notesDisplay as HTMLElement);
-				console.log('Force refresh: Notes display updated via fallback search');
+				
 				return;
 			}
 			
@@ -1131,7 +1131,7 @@ You can include:
 					return;
 				}
 				
-				console.log('Modal submit with title:', title);
+				
 				
 				// Mark as resolved and resolve with title BEFORE closing modal
 				isResolved = true;
@@ -1146,7 +1146,7 @@ You can include:
 			const handleCancel = () => {
 				if (isResolved) return;
 				
-				console.log('Modal cancelled');
+				
 				
 				// Mark as resolved and resolve with null BEFORE closing modal
 				isResolved = true;
@@ -1175,7 +1175,7 @@ You can include:
 			// Handle modal close via other means (X button, outside click, etc.)
 			modal.onClose = () => {
 				if (!isResolved) {
-					console.log('Modal closed via onClose handler');
+					
 					isResolved = true;
 					resolve(null);
 				}
@@ -1235,17 +1235,17 @@ You can include:
 			const activeLeaf = this.app.workspace.activeLeaf;
 			
 			if (activeLeaf) {
-				console.log('Splitting main editor to the right');
+				
 				// Split the current leaf vertically (creates right pane in main editor)
 				const newLeaf = this.app.workspace.createLeafBySplit(activeLeaf, 'vertical');
 				await newLeaf.openFile(file);
 				this.app.workspace.setActiveLeaf(newLeaf);
-				console.log('Note opened in right split of main editor');
+				
 				return;
 			}
 
 			// Fallback: create new leaf in main workspace
-			console.log('Fallback: creating new leaf in main workspace');
+			
 			const newLeaf = this.app.workspace.getLeaf(true);
 			await newLeaf.openFile(file);
 			this.app.workspace.setActiveLeaf(newLeaf);
@@ -1287,7 +1287,7 @@ You can include:
 					const lastLineLength = markdownView.editor.getLine(lastLine).length;
 					markdownView.editor.setCursor(lastLine, lastLineLength);
 					
-					console.log('Editor focused and cursor positioned');
+					
 				}
 			}
 		} catch (error) {
@@ -1644,14 +1644,14 @@ You can include:
 			// Get summary using the same pipeline as smart extraction
 			if (needsSummary) {
 				try {
-					console.log('Starting URL content extraction for:', url.url);
+					
 					const smartExtractService = this.plugin.smartExtractionService;
 					
 					// Step 1: Try MCP scraping first (same as smart extract)
 					let content = await smartExtractService.tryMCPScraping(url.url);
 					
 					if (content && content.trim()) {
-						console.log(`MCP scraping successful, extracted ${content.length} characters`);
+						
 						
 						// Step 2: Use content directly (OpenAI service not directly accessible)
 						const summary = content.substring(0, 200) + (content.length > 200 ? '...' : '');
@@ -1667,7 +1667,7 @@ You can include:
 							if (summaryText) {
 								summaryText.textContent = finalSummary;
 							}
-							console.log('Summary generated successfully:', finalSummary);
+							
 						} else {
 							const fallbackSummary = 'Summary could not be generated from URL content.';
 							this.cardResearchUrls[index].description = fallbackSummary;
@@ -1676,7 +1676,7 @@ You can include:
 							}
 						}
 					} else {
-						console.log('MCP scraping failed, trying direct fetch...');
+						
 						
 						// Step 3: Fallback to direct URL fetch (same as smart extract fallback)
 						try {
@@ -2173,7 +2173,7 @@ You can include:
 		let previewEl: HTMLElement | null = null;
 		
 		element.addEventListener('mouseenter', () => {
-			console.log('Mouse entered note link in modal:', file.basename);
+			
 			
 			if (hoverTimeout) {
 				clearTimeout(hoverTimeout);
@@ -2181,7 +2181,7 @@ You can include:
 			
 			hoverTimeout = setTimeout(async () => {
 				try {
-					console.log('Creating preview for:', file.basename);
+					
 					const content = await this.app.vault.read(file);
 					// Show full content for scrolling
 					let previewContent = content;
@@ -2257,11 +2257,11 @@ You can include:
 					
 					// Add hover events to keep preview open when mouse is over it
 					previewEl.addEventListener('mouseenter', () => {
-						console.log('Mouse entered preview in modal');
+						
 					});
 					
 					previewEl.addEventListener('mouseleave', () => {
-						console.log('Mouse left preview in modal');
+						
 						setTimeout(() => {
 							if (previewEl) {
 								previewEl.remove();
@@ -2270,7 +2270,7 @@ You can include:
 						}, 100);
 					});
 					
-					console.log('Preview created and positioned');
+					
 					
 				} catch (error) {
 					console.error('Error reading note for preview:', error);
@@ -2302,11 +2302,11 @@ You can include:
 					
 					// Add hover events to error preview as well
 					previewEl.addEventListener('mouseenter', () => {
-						console.log('Mouse entered error preview in modal');
+						
 					});
 					
 					previewEl.addEventListener('mouseleave', () => {
-						console.log('Mouse left error preview in modal');
+						
 						setTimeout(() => {
 							if (previewEl) {
 								previewEl.remove();
@@ -2319,7 +2319,7 @@ You can include:
 		});
 		
 		element.addEventListener('mouseleave', () => {
-			console.log('Mouse left note link in modal:', file.basename);
+			
 			
 			if (hoverTimeout) {
 				clearTimeout(hoverTimeout);

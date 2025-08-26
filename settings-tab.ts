@@ -343,7 +343,7 @@ export class CrystalBoardsSettingTab extends PluginSettingTab {
 				}
 				
 				// TODO: Implement data validation and import logic
-				console.log('Imported data:', importedData);
+				
 				
 				// For now, just log the data
 				// In a full implementation, you'd want to:

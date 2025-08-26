@@ -190,9 +190,9 @@ Guidelines:
 			throw new Error('Invalid API key format - OpenAI keys should start with "sk-"');
 		}
 
-		console.log('Making OpenAI API call with model:', this.config.model);
-		console.log('API key present:', this.config.apiKey ? 'Yes' : 'No');
-		console.log('API key format valid:', this.config.apiKey.startsWith('sk-') ? 'Yes' : 'No');
+		
+		
+		
 
 		const requestParams: RequestUrlParam = {
 			url: this.apiEndpoint,
@@ -220,9 +220,9 @@ Guidelines:
 		};
 
 		try {
-			console.log('Sending request to OpenAI...');
+			
 			const response = await requestUrl(requestParams);
-			console.log('OpenAI response status:', response.status);
+			
 			
 			if (response.status !== 200) {
 				console.error('OpenAI API error response:', response.text);
@@ -244,7 +244,7 @@ Guidelines:
 			}
 
 			const data = response.json;
-			console.log('OpenAI response received, choices count:', data.choices?.length || 0);
+			
 			
 			if (!data.choices || data.choices.length === 0) {
 				throw new Error('No response from OpenAI');
@@ -301,19 +301,19 @@ Guidelines:
 	 */
 	async testConnection(): Promise<boolean> {
 		try {
-			console.log('Testing OpenAI connection...');
-			console.log('Using model:', this.config.model);
-			console.log('Max tokens:', this.config.maxTokens);
+			
+			
+			
 			
 			const response = await this.callOpenAI('Respond with valid JSON containing only: {"status": "ok", "message": "Connection test successful"}');
 			
-			console.log('Test response received:', response);
+			
 			
 			// Try to parse the response
 			const parsed = JSON.parse(response);
 			const success = parsed.status === 'ok' || response.toLowerCase().includes('ok') || response.toLowerCase().includes('success');
 			
-			console.log('Connection test result:', success ? 'SUCCESS' : 'FAILED');
+			
 			return success;
 		} catch (error) {
 			console.error('OpenAI connection test failed with error:', error);
@@ -348,14 +348,14 @@ Guidelines:
 	}): Promise<TaskAnalysis & { keyTakeaways?: string[]; analysisMethod: string; transcript?: string }> {
 		const { videoId, metadata, task, fallbackContent } = params;
 		
-		console.log('[DEBUG] Starting Innertube API analysis for YouTube video');
+		
 		
 		try {
 			// Step 1: Extract transcript using Innertube API
 			const transcriptData = await this.extractTranscriptViaInnertube(videoId);
 			
 			if (transcriptData && transcriptData.segments && transcriptData.segments.length > 0) {
-				console.log(`[DEBUG] Successfully extracted ${transcriptData.segments.length} transcript segments`);
+				
 				
 				// Step 2: Analyze transcript with specialized AI prompts
 				const analysis = await this.analyzeTranscriptContent({
@@ -372,13 +372,13 @@ Guidelines:
 				};
 				
 			} else {
-				console.warn('[DEBUG] No transcript available via Innertube, falling back to rich content');
+				
 				throw new Error('No transcript available');
 			}
 			
 		} catch (error) {
-			console.warn('[DEBUG] Innertube analysis failed:', error.message);
-			console.log('[DEBUG] Falling back to rich content analysis');
+			
+			
 			
 			// Fall back to existing rich content analysis
 			const fallbackAnalysis = await this.analyzeYouTubeVideo({
@@ -411,7 +411,7 @@ Guidelines:
 		}>;
 	} | null> {
 		try {
-			console.log(`[DEBUG] Extracting transcript via Innertube API for video: ${videoId}`);
+			
 			
 			// Step 1: Get the INNERTUBE_API_KEY from the video page
 			const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -436,7 +436,7 @@ Guidelines:
 			}
 			
 			const apiKey = apiKeyMatch[1];
-			console.log('[DEBUG] Successfully extracted Innertube API key');
+			
 			
 			// Step 2: Call the player API with Android client context
 			const playerEndpoint = `https://www.youtube.com/youtubei/v1/player?key=${apiKey}`;
@@ -465,7 +465,7 @@ Guidelines:
 			}
 			
 			const playerData = playerResponse.json;
-			console.log('[DEBUG] Successfully called Innertube player API');
+			
 			
 			// Step 3: Extract caption tracks
 			const tracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
@@ -477,7 +477,7 @@ Guidelines:
 			let track = tracks.find((t: any) => t.languageCode === 'en');
 			if (!track) {
 				track = tracks[0]; // Use first available language
-				console.log(`[DEBUG] English not available, using: ${track.languageCode}`);
+				
 			}
 			
 			// Step 4: Fetch and parse the caption XML
@@ -485,7 +485,7 @@ Guidelines:
 			// Remove fmt parameter if present to get raw XML
 			baseUrl = baseUrl.replace(/&fmt=\w+$/, '');
 			
-			console.log('[DEBUG] Fetching caption XML from:', baseUrl.substring(0, 100) + '...');
+			
 			
 			const captionResponse = await (global as any).requestUrl({
 				url: baseUrl,
@@ -500,13 +500,13 @@ Guidelines:
 			}
 			
 			const xml = captionResponse.text;
-			console.log(`[DEBUG] Successfully fetched caption XML (${xml.length} characters)`);
+			
 			
 			// Step 5: Parse XML and extract segments
 			return this.parseInnertubeTranscriptXML(xml);
 			
 		} catch (error) {
-			console.error('[DEBUG] Innertube transcript extraction failed:', error.message);
+			
 			return null;
 		}
 	}
@@ -528,7 +528,7 @@ Guidelines:
 			const textMatches = xml.match(/<text[^>]*start="([^"]*)"[^>]*dur="([^"]*)"[^>]*>([^<]*)<\/text>/g);
 			
 			if (!textMatches || textMatches.length === 0) {
-				console.log('[DEBUG] No text segments found in XML');
+				
 				return null;
 			}
 			
@@ -554,7 +554,7 @@ Guidelines:
 				}
 			}
 			
-			console.log(`[DEBUG] Parsed ${segments.length} transcript segments, total text: ${fullText.length} characters`);
+			
 			
 			return {
 				fullText: fullText,
@@ -562,7 +562,7 @@ Guidelines:
 			};
 			
 		} catch (error) {
-			console.error('[DEBUG] Failed to parse Innertube XML:', error);
+			
 			return null;
 		}
 	}
@@ -601,7 +601,7 @@ Guidelines:
 		
 		// Detect video type for specialized analysis
 		const videoType = this.detectVideoType(transcript, metadata || {});
-		console.log(`[DEBUG] Detected video type: ${videoType}`);
+		
 		
 		// Create context-specific prompt
 		const prompt = this.buildIntelligentPrompt(videoType, transcript, metadata || {}, task);
@@ -660,7 +660,7 @@ Guidelines:
 			} as any;
 			
 		} catch (error) {
-			console.error('[DEBUG] Intelligent analysis failed:', error);
+			
 			// Fallback to basic analysis
 			return {
 				context: `YouTube Video - ${videoType} Analysis`,
@@ -836,7 +836,7 @@ JSON Response:
 				try {
 					parsedResponse = JSON.parse(jsonMatch[0]);
 				} catch (parseError) {
-					console.warn('[DEBUG] Failed to parse JSON, trying manual extraction');
+					
 					parsedResponse = this.extractResponseFields(content);
 				}
 			} else {
@@ -865,7 +865,7 @@ JSON Response:
 			};
 			
 		} catch (error) {
-			console.error('[DEBUG] Response parsing failed:', error);
+			
 			const fallbackDescription = this.truncateAtSentenceEnd(content, 2000);
 			
 			return {
@@ -1092,7 +1092,7 @@ JSON Response:
 			index === self.findIndex(u => u.url === url.url)
 		).slice(0, 5);
 		
-		console.log(`[DEBUG] Generated ${uniqueUrls.length} topic-specific URLs for tools:`, Array.from(allTools));
+		
 		
 		return uniqueUrls;
 	}
@@ -1277,7 +1277,7 @@ Format your response as JSON:
 				// First attempt: direct parsing
 				parsed = JSON.parse(response);
 			} catch (parseError1) {
-				console.log('[DEBUG] Direct JSON parse failed, trying cleanup:', parseError1.message);
+				
 				
 				try {
 					// Second attempt: clean up common issues
@@ -1294,9 +1294,9 @@ Format your response as JSON:
 					}
 					
 					parsed = JSON.parse(cleanedResponse);
-					console.log('[DEBUG] JSON cleanup successful');
+					
 				} catch (parseError2) {
-					console.log('[DEBUG] JSON cleanup failed, trying manual extraction:', parseError2.message);
+					
 					
 					try {
 						// Third attempt: manual field extraction using regex
@@ -1312,10 +1312,10 @@ Format your response as JSON:
 								nextSteps: nextSteps || [],
 								suggestedSearchQueries: suggestedSearchQueries || []
 							};
-							console.log('[DEBUG] Manual field extraction successful');
+							
 						}
 					} catch (parseError3) {
-						console.log('[DEBUG] Manual extraction failed:', parseError3.message);
+						
 					}
 				}
 			}
@@ -1330,7 +1330,7 @@ Format your response as JSON:
 				};
 			} else {
 				// Final fallback: use raw response as description
-				console.log('[DEBUG] Using raw response as fallback');
+				
 				return {
 					context,
 					description: response.substring(0, 1000) + (response.length > 1000 ? '...' : ''),
@@ -1397,7 +1397,7 @@ Format your response as JSON:
 			
 			return items.length > 0 ? items : null;
 		} catch (e) {
-			console.log('[DEBUG] Array extraction failed:', e.message);
+			
 			return null;
 		}
 	}
