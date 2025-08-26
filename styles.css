@@ -3784,8 +3784,9 @@ button.mod-warning:hover {
 	z-index: 2000 !important;
 }
 
-/* Fallback for browsers that don't support :has() */
-.modal {
+/* Fallback for browsers that don't support :has() - ONLY apply to our modals */
+.modal.crystal-card-modal,
+.modal:has(.smart-extract-preview-modal) {
 	width: 65vw !important;
 	max-width: 1000px !important;
 	position: fixed !important;
@@ -3796,7 +3797,7 @@ button.mod-warning:hover {
 	z-index: 2000 !important;
 }
 
-.modal:not(:has(.smart-extract-preview-modal)) {
+.modal.crystal-card-modal:not(:has(.smart-extract-preview-modal)) {
 	width: auto !important;
 	max-width: 700px !important;
 }
@@ -5146,3 +5147,118 @@ button.mod-warning:hover {
 
 /* Removed secondary styling - Back to Dashboard button now uses primary accent styling */
 
+/* Smart Extract Loading Modal Styles */
+.smart-extract-loading-modal {
+	padding: 2rem;
+	text-align: center;
+	max-width: 500px;
+	margin: 0 auto;
+}
+
+.smart-extract-loading-header {
+	margin-bottom: 2rem;
+}
+
+.smart-extract-loading-title {
+	color: var(--text-normal);
+	margin: 0 0 1rem 0;
+	font-size: 1.5rem;
+	font-weight: 600;
+}
+
+.smart-extract-loading-status {
+	color: var(--text-muted);
+	margin: 0 0 2rem 0;
+	font-size: 1rem;
+	min-height: 1.5rem;
+}
+
+.smart-extract-progress-container {
+	position: relative;
+	margin-bottom: 2rem;
+}
+
+.smart-extract-progress-bg {
+	width: 100%;
+	height: 20px;
+	background: var(--background-modifier-border);
+	border-radius: 10px;
+	overflow: hidden;
+	position: relative;
+}
+
+.smart-extract-progress-bar {
+	height: 100%;
+	background: linear-gradient(90deg, 
+		var(--interactive-accent), 
+		var(--interactive-accent-hover));
+	border-radius: 10px;
+	width: 0%;
+	transition: width 0.3s ease;
+	position: relative;
+	overflow: hidden;
+}
+
+.smart-extract-progress-bar:not(.error)::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, 
+		transparent, 
+		rgba(255, 255, 255, 0.3), 
+		transparent);
+	animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+	0% { left: -100%; }
+	100% { left: 100%; }
+}
+
+.smart-extract-progress-bar.error {
+	background: linear-gradient(90deg, 
+		var(--text-error), 
+		color-mix(in srgb, var(--text-error), #ff0000 20%));
+}
+
+.smart-extract-progress-text {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	color: var(--text-normal);
+	font-weight: 600;
+	font-size: 0.85rem;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.smart-extract-loading-buttons {
+	display: flex;
+	justify-content: center;
+	gap: 1rem;
+}
+
+.smart-extract-cancel-btn {
+	background: var(--interactive-normal);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.75rem 1.5rem;
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.smart-extract-cancel-btn:hover:not(:disabled) {
+	background: var(--interactive-hover);
+	transform: translateY(-1px);
+}
+
+.smart-extract-cancel-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}

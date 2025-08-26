@@ -106,46 +106,83 @@ export class SmartExtractionService {
 	}
 
 	/**
-	 * Main Smart Extract workflow - now shows preview first
+	 * Main Smart Extract workflow - shows loading during preview generation
 	 */
 	async performSmartExtraction(): Promise<SmartExtractionResult> {
-		// Generate preview and show modal
-		const preview = await this.generateFullPreview();
+		// Show loading modal during preview generation
+		const { SmartExtractLoadingModal } = require('./smart-extract-loading-modal');
+		const loadingModal = new SmartExtractLoadingModal(this.plugin);
+		loadingModal.open();
 		
-		// Return early if no tasks found
-		if (preview.totalTasks === 0) {
+		let isCancelled = false;
+		loadingModal.onCancel(() => {
+			isCancelled = true;
+		});
+		
+		try {
+			// Generate preview with progress updates
+			const preview = await this.generateFullPreview((progress: number, status: string) => {
+				if (!isCancelled) {
+					loadingModal.updateProgress(progress, status);
+				}
+			});
+			
+			// Close loading modal and check for cancellation
+			loadingModal.close();
+			
+			if (isCancelled) {
+				return {
+					success: false,
+					tasksAnalyzed: 0,
+					smartCards: [],
+					boardsCreated: [],
+					boardsUpdated: [],
+					errors: ['Smart extraction cancelled by user'],
+					processingTime: 0
+				};
+			}
+			
+			// Return early if no tasks found
+			if (preview.totalTasks === 0) {
+				return {
+					success: false,
+					tasksAnalyzed: 0,
+					smartCards: [],
+					boardsCreated: [],
+					boardsUpdated: [],
+					errors: ['No tasks found to extract'],
+					processingTime: 0
+				};
+			}
+
+			// Show preview modal with callback for approval
+			const { SmartExtractPreviewModal } = require('./smart-extract-preview-modal');
+			const previewModal = new SmartExtractPreviewModal(this.plugin, preview);
+			
+			// Set up the callback for when extraction is approved
+			previewModal.onApprovalCallback = async (approval: SmartExtractApproval) => {
+				return await this.executeApprovedExtraction(approval);
+			};
+
+			previewModal.open();
+
+			// Return a default result - the actual result will be handled by the callback
 			return {
-				success: false,
-				tasksAnalyzed: 0,
+				success: true,
+				tasksAnalyzed: preview.smartCards.length,
 				smartCards: [],
 				boardsCreated: [],
 				boardsUpdated: [],
-				errors: ['No tasks found to extract'],
+				errors: [],
 				processingTime: 0
 			};
+			
+		} catch (error) {
+			// Close loading modal on error
+			loadingModal.close();
+			console.error('Smart extraction failed:', error);
+			throw error;
 		}
-
-		// Show preview modal with callback for approval
-		const { SmartExtractPreviewModal } = require('./smart-extract-preview-modal');
-		const previewModal = new SmartExtractPreviewModal(this.plugin, preview);
-		
-		// Set up the callback for when extraction is approved
-		previewModal.onApprovalCallback = async (approval: SmartExtractApproval) => {
-			return await this.executeApprovedExtraction(approval);
-		};
-
-		previewModal.open();
-
-		// Return a default result - the actual result will be handled by the callback
-		return {
-			success: true,
-			tasksAnalyzed: preview.smartCards.length,
-			smartCards: [],
-			boardsCreated: [],
-			boardsUpdated: [],
-			errors: [],
-			processingTime: 0
-		};
 	}
 
 	/**
@@ -1475,7 +1512,7 @@ export class SmartExtractionService {
 	/**
 	 * Generate full preview with all tasks analyzed (used for actual smart extraction workflow)
 	 */
-	async generateFullPreview(): Promise<SmartExtractionPreview> {
+	async generateFullPreview(progressCallback?: (progress: number, status: string) => void): Promise<SmartExtractionPreview> {
 		try {
 			// Step 1: Validate settings
 			if (!this.validateSmartExtractSettings()) {
@@ -1483,6 +1520,7 @@ export class SmartExtractionService {
 			}
 
 			// Step 2: Get extracted tasks
+			progressCallback?.(10, 'Extracting tasks from source...');
 			const extractedTasks = await this.getExtractedTasks();
 			
 			if (extractedTasks.length === 0) {
@@ -1496,10 +1534,18 @@ export class SmartExtractionService {
 
 			// Step 3: Analyze all tasks with AI
 			console.log(`Generating full preview for ${extractedTasks.length} tasks...`);
+			progressCallback?.(20, `Starting AI analysis of ${extractedTasks.length} tasks...`);
+			
 			const smartCards: SmartCard[] = [];
 			const errors: string[] = [];
 
-			for (const task of extractedTasks) {
+			for (let i = 0; i < extractedTasks.length; i++) {
+				const task = extractedTasks[i];
+				
+				// Update progress for each task (20% to 90% for AI analysis)
+				const taskProgress = 20 + (i / extractedTasks.length) * 70;
+				progressCallback?.(taskProgress, `Analyzing task ${i + 1} of ${extractedTasks.length}: "${task.cleanText.substring(0, 40)}${task.cleanText.length > 40 ? '...' : ''}"`);
+				
 				try {
 					const smartCard = await this.analyzeTaskWithAI(task);
 					smartCards.push(smartCard);
@@ -1529,6 +1575,7 @@ export class SmartExtractionService {
 				(preview as any).errors = errors;
 			}
 
+			progressCallback?.(100, `Analysis complete! Generated ${smartCards.length} smart cards.`);
 			return preview;
 
 		} catch (error) {
