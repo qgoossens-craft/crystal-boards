@@ -3767,19 +3767,67 @@ button.mod-warning:hover {
 	transform: none;
 }
 
+/* Work with Obsidian's native modal system - reduced size and proper centering */
+.modal:has(.smart-extract-preview-modal),
+.modal-container:has(.smart-extract-preview-modal) {
+	width: 65vw !important;
+	max-width: 1000px !important;
+	min-height: 55vh !important;
+	max-height: 75vh !important;
+	/* Simple, reliable centering */
+	position: fixed !important;
+	top: 50% !important;
+	left: 50% !important;
+	transform: translate(-50%, -50%) !important;
+	margin: 0 !important;
+	/* Ensure it's above OS controls */
+	z-index: 2000 !important;
+}
+
+/* Fallback for browsers that don't support :has() */
+.modal {
+	width: 65vw !important;
+	max-width: 1000px !important;
+	position: fixed !important;
+	top: 50% !important;
+	left: 50% !important;
+	transform: translate(-50%, -50%) !important;
+	margin: 0 !important;
+	z-index: 2000 !important;
+}
+
+.modal:not(:has(.smart-extract-preview-modal)) {
+	width: auto !important;
+	max-width: 700px !important;
+}
+
+/* Remove the conflicting centering fixes that broke it */
+
 .smart-extract-preview-modal {
-	width: 95%;
-	max-width: 1200px;
-	max-height: 95vh;
 	overflow-y: auto;
-	padding: 1rem 1.5rem;
-	margin: 2.5vh auto;
+	padding: 1.5rem 2rem !important;
 	/* Smooth scrolling for better UX */
 	scroll-behavior: smooth;
+	/* More moderate sizing for better modal feel */
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+	min-height: 50vh !important;
+	/* Ensure content is perfectly centered */
+	box-sizing: border-box !important;
 }
 
 .smart-extract-preview-modal .modal-content {
-	padding: 0;
+	padding: 0 !important;
+	width: 100% !important;
+	max-width: 100% !important;
+	height: auto !important;
+	max-height: 70vh !important;
+	display: flex !important;
+	flex-direction: column !important;
+	overflow: hidden !important;
+	margin: 0 !important;
+	box-sizing: border-box !important;
 }
 
 .smart-extract-header {
@@ -3834,43 +3882,57 @@ button.mod-warning:hover {
 .smart-cards-preview {
 	display: flex;
 	flex-direction: column;
-	gap: 1rem;
+	gap: 1.8rem !important;
 	/* Removed max-height and overflow-y for unified scrolling */
-	padding: 1rem;
-	border: 1px solid var(--background-modifier-border);
+	padding: 1.8rem !important;
+	border: none;
 	border-radius: 8px;
-	margin-bottom: 1.5rem;
+	margin-bottom: 1.8rem;
 	background: var(--background-primary);
+	min-height: 55vh !important;
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+	overflow-x: hidden !important;
+	word-wrap: break-word !important;
 }
 
 .smart-card-preview {
 	background: var(--background-secondary);
-	border: 1px solid var(--background-modifier-border);
+	border: none;
 	border-radius: 8px;
-	padding: 1.25rem;
+	padding: 2.4rem !important;
 	transition: all 0.2s ease;
-	font-size: 0.95rem;
-	min-height: auto;
+	font-size: 1.1rem !important;
+	min-height: 24vh !important;
+	line-height: 1.6 !important;
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+	overflow-x: hidden !important;
+	word-wrap: break-word !important;
+	overflow-wrap: break-word !important;
 }
 
 .smart-card-preview:hover {
-	border-color: var(--interactive-accent);
 	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .smart-card-preview .card-header {
 	display: flex;
 	align-items: center;
-	margin-bottom: 1rem;
+	margin-bottom: 1.8rem !important;
 	position: relative;
-	min-height: 2rem;
-	gap: 0.75rem;
+	min-height: 3rem !important;
+	gap: 1.2rem !important;
+	padding-bottom: 1.2rem !important;
+	border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .smart-card-preview .card-header-left {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
+	gap: 1.2rem;
 	flex: 1;
 	min-width: 0; /* Allow text to shrink */
 }
@@ -3878,11 +3940,13 @@ button.mod-warning:hover {
 .smart-card-preview .card-title {
 	font-weight: 600;
 	flex: 1;
-	font-size: 1.05rem;
+	font-size: 1.4rem !important;
 	line-height: 1.4;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
+	hyphens: auto;
 	min-width: 0; /* Allow text to shrink */
+	max-width: 100%;
 }
 
 .confidence-badge {
@@ -3903,7 +3967,7 @@ button.mod-warning:hover {
 	padding: 1rem;
 	border-radius: 6px;
 	margin: 0.75rem 0;
-	border: 1px solid var(--background-modifier-border);
+	border: none;
 }
 
 .ai-context, .ai-description, .ai-next-steps {
@@ -3923,6 +3987,10 @@ button.mod-warning:hover {
 	line-height: 1.5;
 	display: block;
 	color: var(--text-normal);
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	hyphens: auto;
+	max-width: 100%;
 }
 
 .ai-next-steps ul {
@@ -4023,7 +4091,7 @@ button.mod-warning:hover {
 /* Smart Extract Card Editor Styles */
 .card-editor {
 	background: var(--background-secondary);
-	border: 1px solid var(--background-modifier-border);
+	border: none;
 	border-radius: 8px;
 	padding: 1rem;
 	margin: 1rem 0;
@@ -4364,7 +4432,7 @@ button.mod-warning:hover {
 	gap: 0.5rem;
 	padding: 0.75rem;
 	background: var(--background-secondary);
-	border: 1px solid var(--background-modifier-border);
+	border: none;
 	border-radius: 8px;
 	margin-bottom: 0.75rem;
 	transition: all 0.2s ease;
@@ -4791,15 +4859,81 @@ button.mod-warning:hover {
 
 /* Enhanced card preview spacing */
 .smart-card-preview {
-	margin-bottom: 1.5rem !important;
-	padding: 1rem;
+	margin-bottom: 2.4rem !important;
+	padding: 2.4rem !important;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 8px;
 	background: var(--background-primary);
 }
 
+/* Make all content sections larger */
+.smart-card-preview .ai-analysis,
+.smart-card-preview .ai-summary-preview,
+.smart-card-preview .linked-note-preview,
+.smart-card-preview .card-urls {
+	margin: 1.8rem 0 !important;
+	padding: 1.2rem !important;
+	background: var(--background-modifier-form-field) !important;
+	border-radius: 6px !important;
+	border: none !important;
+	font-size: 1.1rem !important;
+	line-height: 1.6 !important;
+}
+
+.smart-card-preview .ai-context,
+.smart-card-preview .ai-description,
+.smart-card-preview .ai-next-steps {
+	margin: 1.2rem 0 !important;
+	padding: 0.9rem 0 !important;
+	font-size: 0.9rem !important;
+	line-height: 1.6 !important;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+	.modal.smart-extract-modal,
+	.modal.smart-extract-modal.modal,
+	body .modal.smart-extract-modal,
+	.app-container .modal.smart-extract-modal {
+		width: 95vw !important;
+		max-width: none !important;
+	}
+	
+	.smart-extract-preview-modal {
+		padding: 1.2rem !important;
+	}
+	
+	.smart-cards-preview {
+		padding: 1.2rem !important;
+		min-height: 45vh !important;
+	}
+	
+	.smart-card-preview {
+		padding: 1.8rem !important;
+		min-height: 18vh !important;
+	}
+}
+
 .smart-card-preview:last-child {
 	margin-bottom: 0 !important;
+}
+
+/* Ensure all text content in smart extract wraps properly */
+.smart-extract-preview-modal * {
+	word-wrap: break-word !important;
+	overflow-wrap: break-word !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+}
+
+/* Specific fixes for long URLs and text content */
+.smart-extract-preview-modal a,
+.smart-extract-preview-modal span,
+.smart-extract-preview-modal p,
+.smart-extract-preview-modal li,
+.smart-extract-preview-modal div {
+	word-break: break-word !important;
+	hyphens: auto !important;
 }
 
 /* URL item with Create Note button */
