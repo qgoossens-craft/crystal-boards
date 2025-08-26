@@ -106,6 +106,9 @@ export class TaskExtractor {
 		// Remove hashtags
 		cleanText = cleanText.replace(/#[\w-]+/g, '').trim();
 		
+		// Remove checkbox syntax ([ ], [x], [X], etc.)
+		cleanText = cleanText.replace(/^\s*\[[^\]]*\]\s*/, '').trim();
+		
 		// Remove markdown links
 		cleanText = cleanText.replace(/\[([^\]]*)\]\([^)]+\)/g, '$1').trim();
 		
