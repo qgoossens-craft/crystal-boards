@@ -176,7 +176,7 @@ export class SmartExtractPreviewModal extends Modal {
 				if (researchUrl.description) {
 					urlEl.createEl('p', { 
 						cls: 'url-summary',
-						text: researchUrl.description 
+						text: this.truncateUrlDescription(researchUrl.description)
 					});
 				}
 			}
@@ -531,5 +531,30 @@ export class SmartExtractPreviewModal extends Modal {
 			.replace(/\\n/g, '<br>')
 			.replace(/<br><br><br>+/g, '<br><br>')
 			.trim();
+	}
+
+	/**
+	 * Truncate URL descriptions to 1-2 sentences for cleaner display
+	 */
+	private truncateUrlDescription(description: string): string {
+		if (!description) return '';
+		
+		// Split by sentence-ending punctuation (. ! ?)
+		const sentences = description.split(/(?<=[.!?])\s+/);
+		
+		// Take first 1-2 sentences, prioritizing shorter content
+		if (sentences.length === 1) {
+			// Single sentence or no sentence breaks - truncate at reasonable length
+			return sentences[0].length > 200 ? sentences[0].substring(0, 200) + '...' : sentences[0];
+		} else if (sentences.length >= 2) {
+			const firstTwo = sentences[0] + ' ' + sentences[1];
+			// If first two sentences are too long, just use the first
+			if (firstTwo.length > 300) {
+				return sentences[0].length > 200 ? sentences[0].substring(0, 200) + '...' : sentences[0];
+			}
+			return firstTwo;
+		}
+		
+		return description;
 	}
 }
