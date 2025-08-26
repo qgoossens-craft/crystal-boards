@@ -1,41 +1,42 @@
-# Crystal Boards - Soft Pastel Colors
+# Crystal Boards - Neutral Colors
 
 ## Final Working Color Palette
 
-These are the successful soft pastel colors that work well for Crystal Boards columns:
+These are the neutral colors with subtle tints that work perfectly for Crystal Boards columns on both light and dark themes:
 
 ### Color Codes
-- **#F0D0D0** - Rose poudré très doux (soft dusty rose)
-- **#D0F0D5** - Vert pastel très subtil (subtle pastel green)  
-- **#D0E5F0** - Bleu ciel très tendre (tender sky blue)
-- **#F0F0D0** - Jaune crème très doux (soft cream yellow)
-- **#E5D0F0** - Lavande très subtile (subtle lavender)
+- **#E8E8E8** - Gris très clair avec nuance chaude (very light warm gray)
+- **#E0E8E0** - Gris avec légère nuance verte (gray with slight green tint)  
+- **#E8E0E8** - Gris avec légère nuance violette (gray with slight purple tint)
+- **#E8E8E0** - Gris avec légère nuance beige (gray with slight beige tint)
+- **#E0E8E8** - Gris avec légère nuance bleue (gray with slight blue tint)
 
 ### Implementation Details
 - Applied in both `types.ts` (UNIVERSAL_COLORS) and `board-view.ts` (universalColors array)
 - Colors are applied using `this.board.columns.indexOf(column) % universalColors.length` for proper indexing
-- Text color set to `#2D3748` (dark gray) for optimal readability on pastel backgrounds
-- Colors work on both light and dark themes
+- Text color uses `#000000` (black) for optimal readability on neutral backgrounds
+- Colors work excellently on both light and dark themes
 - Build tested successfully with no TypeScript errors
 
-### User Feedback
-- User confirmed these colors are much better than previous flashy versions
-- Colors are distinct enough to differentiate columns
-- Soft and professional appearance
-- Not too bright/flashy like previous iterations
+### Design Philosophy
+- **Truly neutral**: Subtle tints that don't distract from content
+- **Theme-agnostic**: Perfect visibility on both light and dark backgrounds
+- **Professional**: Clean, modern appearance suitable for any workspace
+- **Accessible**: High contrast maintained with native Obsidian text colors
+- **Distinctive**: Subtle enough to be neutral, different enough to distinguish columns
 
 ### Technical Implementation
 ```typescript
 // In types.ts
-export const UNIVERSAL_COLORS = ['#F0D0D0', '#D0F0D5', '#D0E5F0', '#F0F0D0', '#E5D0F0'];
+export const UNIVERSAL_COLORS = ['#E8E8E8', '#E0E8E0', '#E8E0E8', '#E8E8E0', '#E0E8E8'];
 
 // In board-view.ts
-const universalColors = ['#F0D0D0', '#D0F0D5', '#D0E5F0', '#F0F0D0', '#E5D0F0'];
+const universalColors = ['#E8E8E8', '#E0E8E0', '#E8E0E8', '#E8E8E0', '#E0E8E8'];
 const colorIndex = this.board.columns.indexOf(column) % universalColors.length;
 columnEl.style.setProperty('background-color', universalColors[colorIndex], 'important');
 
-// Title color for readability
-titleEl.style.setProperty('color', '#2D3748', 'important');
+// Title color for optimal readability
+titleEl.style.setProperty('color', '#000000', 'important');
 ```
 
-These colors are ready for production use and have been user-approved.
+These colors provide the perfect balance of neutrality and subtle distinction, making them ideal for professional use.

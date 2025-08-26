@@ -116,7 +116,8 @@ export class SmartExtractPreviewModal extends Modal {
 			if (card.aiAnalysis.description) {
 				const descEl = analysisEl.createEl('div', { cls: 'ai-description' });
 				descEl.createEl('strong', { text: 'Description: ' });
-				descEl.createSpan({ text: card.aiAnalysis.description });
+				const formattedDesc = this.formatDescriptionForDisplay(card.aiAnalysis.description);
+				descEl.createSpan().innerHTML = formattedDesc;
 			}
 
 			// Next Steps
@@ -517,5 +518,18 @@ export class SmartExtractPreviewModal extends Modal {
 				});
 			}
 		}
+	}
+
+	/**
+	 * Format description text for proper display in HTML
+	 */
+	private formatDescriptionForDisplay(description: string): string {
+		if (!description) return '';
+		
+		// Convert literal backslash-n characters to HTML line breaks
+		return description
+			.replace(/\\n/g, '<br>')
+			.replace(/<br><br><br>+/g, '<br><br>')
+			.trim();
 	}
 }

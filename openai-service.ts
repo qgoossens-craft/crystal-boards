@@ -729,15 +729,15 @@ ${transcript.length > 8000 ? transcript.substring(0, 8000) + '...' : transcript}
 
 		const formattingInstructions = `
 
-FORMATTING REQUIREMENTS:
-- Use proper markdown formatting with headers, bullet points, and spacing
-- Structure content with clear sections and line breaks
-- Use bullet points (•) for lists and sub-points (◦) for nested items
-- Add appropriate spacing between sections
-- Make content scannable and well-organized
-- Keep sentences complete - never cut off mid-sentence
-- Use code blocks (\`code\`) for commands, file paths, and technical terms
-- Use **bold** for emphasis on important tools, concepts, or actions`;
+CRITICAL FORMATTING REQUIREMENTS:
+- Create clean, professional markdown WITHOUT excessive line breaks
+- Use exactly ONE blank line between sections (not multiple \\n\\n)
+- Structure content logically with clear, concise headers
+- Use bullet points (•) for lists, keeping them tight and readable
+- NO redundant "Research Summary" or analysis method labels in content
+- Keep descriptions concise and well-structured
+- Use proper markdown syntax: ## for headers, • for bullets, \`code\` for commands
+- Focus on actionable, specific information rather than verbose explanations`;
 
 		switch (videoType) {
 			case 'technical_tutorial':
@@ -745,113 +745,71 @@ FORMATTING REQUIREMENTS:
 
 This appears to be a technical tutorial. Extract and format the following information:
 
-1. **Prerequisites**: What tools, software, or knowledge is needed?
-2. **Step-by-Step Process**: List each major step with key commands/actions
-3. **Commands/Code**: Extract any terminal commands, code snippets, or configuration files mentioned
-4. **Tools & Technologies**: Identify specific tools, libraries, frameworks, or technologies mentioned
-5. **Troubleshooting**: Any common issues or solutions mentioned?
-6. **Key Concepts**: Important technical terms or concepts explained
-7. **Follow-up Resources**: Related tools, documentation, or next steps mentioned
-
 Provide a JSON response with this structure:
 {
-	"description": "Well-formatted technical summary using markdown with proper spacing, bullet points, and clear sections. Structure as:\n\n## Overview\n[Brief overview paragraph]\n\n## Key Steps\n• Step 1: [description]\n• Step 2: [description]\n\n## Important Commands\n• \`command-here\`: Purpose/explanation\n• \`another-command\`: Purpose/explanation\n\n## Prerequisites\n• Tool/requirement 1\n• Tool/requirement 2",
-	"keyTakeaways": ["specific technical insights with tool names", "important commands or configurations", "key concepts and best practices"],
-	"nextSteps": ["actionable steps with specific commands or actions", "research specific tools mentioned", "explore advanced techniques"],
-	"suggestedSearchQueries": ["specific technical terms for documentation", "tool combinations mentioned", "advanced tutorials"],
-	"specificTools": ["tool1", "tool2", "library/framework", "technology"],
-	"commands": ["exact commands shown", "configuration examples"],
-	"troubleshooting": ["common issues mentioned", "solutions provided"],
-	"urls": ["relevant documentation URLs", "tool websites", "tutorial resources"]
+	"description": "## Overview\\nBrief, clear paragraph about what this tutorial covers and its main goal.\\n\\n## Key Steps\\n• Step 1: Specific action with key tools/commands\\n• Step 2: Specific action with key tools/commands\\n• Step 3: Specific action with key tools/commands\\n\\n## Important Commands\\n• \`command-name\`: Clear purpose and usage\\n• \`another-command\`: Clear purpose and usage\\n\\n## Prerequisites\\n• Required tool or setup item\\n• Required knowledge or skill",
+	"keyTakeaways": ["specific technical insight with tool name", "important command or configuration tip", "key concept or best practice"],
+	"nextSteps": ["install and configure [specific tool]", "practice [specific skill/command]", "explore [specific advanced topic]"],
+	"suggestedSearchQueries": ["[specific tool] documentation", "[tool combination] tutorial", "[advanced concept] guide"],
+	"specificTools": ["tool1", "tool2", "framework", "library"],
+	"commands": ["exact-command-shown", "configuration-example"],
+	"troubleshooting": ["common issue with solution", "potential problem and fix"]
 }`;
 
 			case 'tutorial':
 				return `${baseInfo}${formattingInstructions}
 
-This is an instructional tutorial. Focus on extracting and formatting:
-
-1. **Learning Objectives**: What will users accomplish?
-2. **Materials/Requirements**: What's needed to follow along?
-3. **Process Breakdown**: Clear step-by-step instructions
-4. **Tools & Resources**: Specific tools, software, or resources mentioned
-5. **Tips and Best Practices**: Expert advice shared
-6. **Common Mistakes**: Pitfalls to avoid
+This is an instructional tutorial. Focus on extracting clear, actionable information:
 
 JSON Response:
 {
-	"description": "Comprehensive tutorial summary with clear formatting:\n\n## What You'll Learn\n[Learning objectives]\n\n## Requirements\n• Requirement 1\n• Requirement 2\n\n## Step-by-Step Process\n• **Step 1**: Detailed description\n• **Step 2**: Detailed description\n\n## Key Tips\n• Important tip 1\n• Important tip 2",
-	"keyTakeaways": ["main skills learned with specific tools", "important techniques and methods", "best practices and expert tips"],
-	"nextSteps": ["specific actions to practice with named tools", "next level skills to learn", "additional resources to explore"],
-	"suggestedSearchQueries": ["related tutorials for specific tools", "advanced techniques", "practice resources"],
-	"specificTools": ["specific tools mentioned", "software/apps", "resources"],
-	"requirements": ["materials needed", "skill prerequisites"],
-	"process": ["formatted step descriptions"]
+	"description": "## What You'll Learn\\nClear description of skills and outcomes from this tutorial.\\n\\n## Requirements\\n• Required material or tool\\n• Required skill or setup\\n\\n## Process Highlights\\n• **Step 1**: Key action with specific details\\n• **Step 2**: Key action with specific details\\n• **Step 3**: Key action with specific details\\n\\n## Pro Tips\\n• Important technique or shortcut\\n• Best practice or common mistake to avoid",
+	"keyTakeaways": ["main skill with specific tools", "important technique", "key best practice"],
+	"nextSteps": ["practice with [specific tool/method]", "try [specific variation/application]", "learn [next level skill]"],
+	"suggestedSearchQueries": ["[skill] advanced techniques", "[tool] best practices", "[topic] troubleshooting"],
+	"specificTools": ["tool1", "software2", "resource3"]
 }`;
 
 			case 'educational':
 				return `${baseInfo}${formattingInstructions}
 
-This is educational content. Extract and format:
-
-1. **Key Concepts**: Main ideas and theories presented
-2. **Examples**: Concrete examples used to illustrate points
-3. **Applications**: Real-world uses of the information
-4. **Tools & References**: Specific tools, studies, or resources mentioned
-5. **Further Study**: Suggested topics for deeper learning
+This is educational content. Extract key concepts and practical applications:
 
 JSON Response:
 {
-	"description": "Educational content summary with structured formatting:\n\n## Core Concepts\n• **Concept 1**: Clear explanation\n• **Concept 2**: Clear explanation\n\n## Key Examples\n• Example demonstrating concept A\n• Example demonstrating concept B\n\n## Practical Applications\n• Real-world application 1\n• Real-world application 2",
-	"keyTakeaways": ["core concepts with specific examples", "important principles and theories", "memorable examples and case studies"],
-	"nextSteps": ["topics to study further with specific focus", "practical applications to try", "tools or methods to explore"],
-	"suggestedSearchQueries": ["deeper concept research", "academic sources", "practical applications"],
-	"specificTools": ["research tools mentioned", "software/platforms", "methodologies"],
-	"concepts": ["concept explanations"],
-	"examples": ["concrete examples provided"]
+	"description": "## Core Concepts\\n• **Concept 1**: Clear, concise explanation\\n• **Concept 2**: Clear, concise explanation\\n\\n## Key Examples\\n• Practical example demonstrating concept A\\n• Real-world application of concept B\\n\\n## Applications\\n• How this applies in [specific context]\\n• Use cases in [specific field/situation]",
+	"keyTakeaways": ["key concept with practical example", "important principle with application", "memorable insight with context"],
+	"nextSteps": ["explore [specific topic] in depth", "apply [concept] to [specific situation]", "research [related area]"],
+	"suggestedSearchQueries": ["[concept] practical applications", "[topic] case studies", "[principle] examples"],
+	"specificTools": ["research tool", "methodology", "framework"]
 }`;
 
 			case 'review':
 				return `${baseInfo}${formattingInstructions}
 
-This is a review or comparison. Extract and format:
-
-1. **Products/Topics Reviewed**: What's being evaluated?
-2. **Criteria**: What aspects are being judged?
-3. **Pros and Cons**: Specific advantages and disadvantages
-4. **Specific Tools/Features**: Named tools, features, or specifications mentioned
-5. **Recommendations**: Final verdict and who it's for
-6. **Alternatives**: Other options mentioned
+This is a review or comparison. Extract clear, actionable insights:
 
 JSON Response:
 {
-	"description": "Detailed review summary with clear structure:\n\n## What's Being Reviewed\n[Product/service overview]\n\n## Key Strengths\n• Strength 1 with specific details\n• Strength 2 with specific details\n\n## Notable Weaknesses\n• Weakness 1 with context\n• Weakness 2 with context\n\n## Final Verdict\n[Recommendation with reasoning]",
-	"keyTakeaways": ["main verdict with specific reasoning", "key strengths with details", "notable weaknesses and limitations"],
-	"nextSteps": ["decision-making actions", "alternatives to research", "specific features to investigate"],
-	"suggestedSearchQueries": ["product comparisons with specific models", "user reviews and experiences", "alternative options"],
-	"specificTools": ["products/services reviewed", "competitors mentioned", "related tools"],
-	"pros": ["detailed advantages"],
-	"cons": ["detailed disadvantages"],
-	"recommendation": "final verdict with reasoning"
+	"description": "## What's Reviewed\\nClear identification of product/service and its main purpose.\\n\\n## Key Strengths\\n• Specific strength with evidence\\n• Notable feature with benefit\\n\\n## Main Weaknesses\\n• Specific limitation with context\\n• Area for improvement\\n\\n## Recommendation\\nClear verdict with reasoning and target audience.",
+	"keyTakeaways": ["main verdict with specific reasoning", "key strength with evidence", "notable limitation with impact"],
+	"nextSteps": ["research [specific alternative]", "compare with [specific competitor]", "test [specific feature]"],
+	"suggestedSearchQueries": ["[product] vs [alternative]", "[product] user reviews", "[category] comparison"],
+	"specificTools": ["reviewed product", "mentioned alternative", "comparison tool"]
 }`;
 
 			default:
 				return `${baseInfo}${formattingInstructions}
 
-Analyze this video content and provide specific, well-formatted insights:
-
-1. **Main Topic**: What is this video primarily about?
-2. **Key Information**: Most important facts or insights shared
-3. **Actionable Advice**: Concrete steps or recommendations given
-4. **Tools & Resources**: Specific tools, websites, books, people, or technologies mentioned
-5. **Resources Mentioned**: Tools, websites, books, or people referenced
+Analyze this video content and provide clean, actionable insights:
 
 JSON Response:
 {
-	"description": "Comprehensive summary with proper formatting:\n\n## Overview\n[Clear overview paragraph]\n\n## Key Points\n• Important point 1 with specifics\n• Important point 2 with specifics\n• Important point 3 with specifics\n\n## Actionable Insights\n• Specific action 1\n• Specific action 2\n\n## Resources & Tools\n• **Tool/Resource 1**: Brief description\n• **Tool/Resource 2**: Brief description",
-	"keyTakeaways": ["important insights with specific details", "practical advice with context", "key facts and discoveries"],
-	"nextSteps": ["specific actions to take with named tools", "resources to explore further", "follow-up research topics"],
-	"suggestedSearchQueries": ["specific tools and technologies", "deeper research topics", "practical applications"],
-	"specificTools": ["tools mentioned", "technologies referenced", "resources cited"]
+	"description": "## Overview\\nClear, concise summary of the video's main topic and key value.\\n\\n## Key Points\\n• Important insight with specific details\\n• Actionable advice with context\\n• Notable fact or discovery\\n\\n## Practical Applications\\n• How to apply this information\\n• Specific steps or recommendations\\n\\n## Resources Mentioned\\n• **Tool/Resource**: Brief description of relevance\\n• **Reference**: Why it's important",
+	"keyTakeaways": ["important insight with specifics", "practical advice with context", "key fact with implications"],
+	"nextSteps": ["specific action with named tools", "research [specific topic]", "try [specific approach/method]"],
+	"suggestedSearchQueries": ["[specific tool/concept] guide", "[topic] best practices", "[subject] examples"],
+	"specificTools": ["tool1", "resource2", "platform3"]
 }`;
 		}
 	}
@@ -885,12 +843,17 @@ JSON Response:
 				parsedResponse = this.extractResponseFields(content);
 			}
 			
+			// Clean up the description formatting
+			let cleanDescription = parsedResponse.description || content.substring(0, 2000);
+			
+			// Remove excessive line breaks and clean up formatting
+			cleanDescription = this.cleanUpDescription(cleanDescription);
+			
 			// Ensure description is properly truncated at sentence boundaries
-			const rawDescription = parsedResponse.description || content.substring(0, 2000);
-			const formattedDescription = this.truncateAtSentenceEnd(rawDescription, 3000);
+			const formattedDescription = this.truncateAtSentenceEnd(cleanDescription, 3000);
 			
 			return {
-				context: `YouTube Video - Advanced ${videoType} Analysis`,
+				context: `YouTube Video Analysis`,
 				description: formattedDescription,
 				keyTakeaways: parsedResponse.keyTakeaways || [],
 				nextSteps: parsedResponse.nextSteps || ['Review the video content', 'Research related topics'],
@@ -906,8 +869,8 @@ JSON Response:
 			const fallbackDescription = this.truncateAtSentenceEnd(content, 2000);
 			
 			return {
-				context: `YouTube Video - ${videoType} Analysis`,
-				description: fallbackDescription,
+				context: `YouTube Video Analysis`,
+				description: this.cleanUpDescription(fallbackDescription),
 				keyTakeaways: [],
 				nextSteps: ['Review the video content'],
 				suggestedSearchQueries: [],
@@ -917,6 +880,49 @@ JSON Response:
 				urls: []
 			};
 		}
+	}
+
+	/**
+	 * Clean up description formatting to remove excessive line breaks and improve readability
+	 */
+	private cleanUpDescription(description: string): string {
+		if (!description) return '';
+		
+		// Remove the problematic "Research Summary" sections that appear in descriptions
+		let cleaned = description
+			// Remove research summary sections with their markers
+			.replace(/\\n\\n📚\s*\*\*Research Summary:\*\*\\n\\n[\s\S]*?(?=\\n\\n##|$)/g, '')
+			.replace(/📚\s*\*\*Research Summary:\*\*[\s\S]*?(?=\n\n##|$)/g, '')
+			// Remove analysis method indicators from descriptions
+			.replace(/🎯\s*\*\*Analysis Method\*\*:\s*[A-Z\s_]+\\n\\n/g, '')
+			.replace(/📺\s*YouTube Video Analysis\\n\\n/g, '')
+			// Clean up excessive line breaks
+			.replace(/\\n\\n\\n+/g, '\\n\\n')
+			.replace(/\n\n\n+/g, '\n\n')
+			// Remove duplicate headers
+			.replace(/##\s*📋\s*Overview\\n\\n##\s*Overview/g, '## Overview')
+			.replace(/##\s*Key Steps\\n\\n##\s*Key Steps/g, '## Key Steps')
+			// Clean up spacing around headers
+			.replace(/\\n\\n##/g, '\\n\\n## ')
+			.replace(/\n\n##/g, '\n\n## ')
+			// Remove empty bullet points
+			.replace(/•\s*\\n/g, '')
+			.replace(/•\s*\n/g, '')
+			// Clean up spacing
+			.replace(/^\s+|\s+$/g, '')
+			.trim();
+		
+		// If the cleaned description is too short or empty, provide a fallback
+		if (!cleaned || cleaned.length < 50) {
+			cleaned = "## Overview\nYouTube video analysis completed with key insights and actionable information extracted.";
+		}
+		
+		// Ensure proper markdown formatting
+		if (!cleaned.startsWith('## ')) {
+			cleaned = '## Overview\n' + cleaned;
+		}
+		
+		return cleaned;
 	}
 
 	/**

@@ -127,15 +127,15 @@ export interface PluginSettings {
 }
 
 // Theme-aware color palettes
-// Universal colors that work beautifully on BOTH light and dark backgrounds
-export const UNIVERSAL_COLORS = ['#F0D0D0', '#D0F0D5', '#D0E5F0', '#F0F0D0', '#E5D0F0'];
+// Neutral colors with subtle tints that work perfectly on BOTH light and dark backgrounds
+export const UNIVERSAL_COLORS = ['#E8E8E8', '#E0E8E0', '#E8E0E8', '#E8E8E0', '#E0E8E8'];
 export const LIGHT_THEME_COLORS = UNIVERSAL_COLORS;
 export const DARK_THEME_COLORS = UNIVERSAL_COLORS;
 /**
  * Get theme-appropriate column colors based on current Obsidian theme
  */
 export function getThemeAwareColors(): string[] {
-	// Return universal colors that work beautifully on both light and dark backgrounds
+	// Return neutral colors with subtle tints that work perfectly on both light and dark backgrounds
 	return UNIVERSAL_COLORS;
 }
 

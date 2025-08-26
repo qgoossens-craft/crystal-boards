@@ -40,7 +40,7 @@ export class CardModal extends Modal {
 		
 		// Initialize editable values
 		this.cardTitle = card.title;
-		this.cardDescription = card.description || '';
+		this.cardDescription = this.cleanDescriptionForDisplay(card.description || '');
 		this.cardTags = [...card.tags];
 		this.cardNoteLinks = [...card.noteLinks];
 		this.cardTodos = [...card.todos];
@@ -52,6 +52,26 @@ export class CardModal extends Modal {
 		// Initialize link manager and preview
 		this.linkManager = new LinkManager(app);
 		this.linkPreviewManager = new LinkPreviewManager(app, this.linkManager);
+	}
+	/**
+	 * Clean description for display by converting literal newlines to actual newlines
+	 * and removing any formatting artifacts from the smart extraction process
+	 */
+	private cleanDescriptionForDisplay(description: string): string {
+		if (!description) return '';
+		
+		let cleaned = description
+			// Convert literal \n to actual newlines
+			.replace(/\\n/g, '\n')
+			// Remove any remaining research summary artifacts that might have slipped through
+			.replace(/📚\s*\*\*Research Summary:\*\*[\s\S]*?(?=\n\n##|$)/g, '')
+			// Clean up excessive line breaks
+			.replace(/\n\n\n+/g, '\n\n')
+			// Remove any remaining analysis method indicators
+			.replace(/🎯\s*\*\*Analysis Method\*\*:\s*[A-Z\s_]+\n\n/g, '')
+			.trim();
+		
+		return cleaned;
 	}
 	/**
 	 * Discover notes in the card's folder structure and update linked notes

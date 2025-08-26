@@ -653,62 +653,62 @@ export class SmartExtractionService {
 			summary += `# 📺 YouTube Video Analysis\n\n`;
 		}
 		
-		// Add analysis method indicator
-		const analysisMethod = result.analysisMethod || 'analysis';
-		const methodEmoji = analysisMethod === 'innertube_transcript' ? '🎯' : 
-							analysisMethod === 'fallback' ? '📝' : '🔍';
-		summary += `${methodEmoji} **Analysis Method**: ${analysisMethod.replace('_', ' ').toUpperCase()}\n\n`;
-		
-		// Add main description with enhanced formatting
+		// Add main description directly (it's already well-formatted from the improved prompt)
 		const description = result.description || 'Analysis completed';
 		if (description && description.length > 0) {
-			// Check if description already has markdown structure
-			if (description.includes('##') || description.includes('**')) {
-				summary += description;
-			} else {
-				// Add basic structure to plain text
-				summary += `## 📋 Overview\n${description}`;
+			// The description now comes pre-formatted from the improved prompt
+			summary += description;
+		}
+		
+		// Add key takeaways if available and not already in description
+		if (result.keyTakeaways && Array.isArray(result.keyTakeaways) && result.keyTakeaways.length > 0) {
+			// Only add if not already included in description
+			if (!description.includes('Key Takeaways')) {
+				summary += '\n\n## 🎯 Key Takeaways\n';
+				result.keyTakeaways.forEach((takeaway: string, index: number) => {
+					summary += `${index + 1}. ${takeaway}\n`;
+				});
 			}
 		}
 		
-		// Add key takeaways if available
-		if (result.keyTakeaways && Array.isArray(result.keyTakeaways) && result.keyTakeaways.length > 0) {
-			summary += '\n\n## 🎯 Key Takeaways\n';
-			result.keyTakeaways.forEach((takeaway: string, index: number) => {
-				summary += `${index + 1}. ${takeaway}\n`;
-			});
-		}
-		
-		// Add next steps if available
+		// Add next steps if available and not already in description
 		if (result.nextSteps && Array.isArray(result.nextSteps) && result.nextSteps.length > 0) {
-			summary += '\n\n## 🚀 Next Steps\n';
-			result.nextSteps.forEach((step: string) => {
-				summary += `• ${step}\n`;
-			});
+			if (!description.includes('Next Steps') && !description.includes('Applications')) {
+				summary += '\n\n## 🚀 Next Steps\n';
+				result.nextSteps.forEach((step: string) => {
+					summary += `• ${step}\n`;
+				});
+			}
 		}
 		
-		// Add suggested search queries
+		// Add research topics if available and not already included
 		if (result.suggestedSearchQueries && Array.isArray(result.suggestedSearchQueries) && result.suggestedSearchQueries.length > 0) {
-			summary += '\n\n## 🔎 Research Topics\n';
-			result.suggestedSearchQueries.forEach((query: string) => {
-				summary += `• ${query}\n`;
-			});
+			if (!description.includes('Research Topics') && !description.includes('Resources')) {
+				summary += '\n\n## 🔎 Research Topics\n';
+				result.suggestedSearchQueries.slice(0, 5).forEach((query: string) => {
+					summary += `• ${query}\n`;
+				});
+			}
 		}
 		
 		// Add commands if available (for technical tutorials)
 		if (result.commands && Array.isArray(result.commands) && result.commands.length > 0) {
-			summary += '\n\n## ⚡ Commands & Code\n';
-			result.commands.forEach((command: string) => {
-				summary += `• \`${command}\`\n`;
-			});
+			if (!description.includes('Commands') && !description.includes('Code')) {
+				summary += '\n\n## ⚡ Commands & Code\n';
+				result.commands.forEach((command: string) => {
+					summary += `• \`${command}\`\n`;
+				});
+			}
 		}
 		
 		// Add troubleshooting if available
 		if (result.troubleshooting && Array.isArray(result.troubleshooting) && result.troubleshooting.length > 0) {
-			summary += '\n\n## 🔧 Troubleshooting\n';
-			result.troubleshooting.forEach((issue: string) => {
-				summary += `• ${issue}\n`;
-			});
+			if (!description.includes('Troubleshooting')) {
+				summary += '\n\n## 🔧 Troubleshooting\n';
+				result.troubleshooting.forEach((issue: string) => {
+					summary += `• ${issue}\n`;
+				});
+			}
 		}
 		
 		// Add video link
@@ -1181,16 +1181,8 @@ export class SmartExtractionService {
 			}
 		}
 
-		// Step 4: Build comprehensive card description
+		// Step 4: Use the AI analysis description directly (now properly formatted)
 		let cardDescription = aiAnalysis.description;
-		
-		if (urlSummaries.length > 0) {
-			cardDescription += '\\n\\n📚 **Research Summary:**\\n';
-			urlSummaries.forEach((summary, index) => {
-				const urlTitle = enhancedUrls[index]?.title || `URL ${index + 1}`;
-				cardDescription += `\\n**${urlTitle}:**\\n${summary}\\n`;
-			});
-		}
 
 		// Step 4.5: Detect tools in description and task text for URL generation
 		const combinedText = `${task.cleanText} ${cardDescription}`;

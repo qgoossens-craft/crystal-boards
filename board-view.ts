@@ -470,8 +470,8 @@ export class BoardView extends ItemView {
 			cls: 'crystal-column',
 			attr: { 'data-column-id': column.id }
 		});
-		// Apply universal color that works on both light and dark backgrounds
-		const universalColors = ['#F0D0D0', '#D0F0D5', '#D0E5F0', '#F0F0D0', '#E5D0F0'];
+		// Apply neutral colors with subtle tints that work on both light and dark backgrounds
+		const universalColors = ['#E8E8E8', '#E0E8E0', '#E8E0E8', '#E8E8E0', '#E0E8E8'];
 		const colorIndex = this.board.columns.indexOf(column) % universalColors.length;
 		columnEl.style.setProperty('background-color', universalColors[colorIndex], 'important');
 
@@ -481,8 +481,8 @@ export class BoardView extends ItemView {
 			text: column.name, 
 			cls: 'crystal-column-title' 
 		});
-		// Apply dark text color for better readability on pastel backgrounds
-		titleEl.style.setProperty('color', '#2D3748', 'important');
+		// Use black text for optimal readability on neutral backgrounds
+		titleEl.style.setProperty('color', '#000000', 'important');
 
 		const columnActions = headerEl.createEl('div', { cls: 'crystal-column-actions' });
 		
