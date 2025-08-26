@@ -100,7 +100,7 @@ export interface ExtractedTask {
 
 export interface PluginSettings {
 	kanbanFolderPath: string;
-	defaultColumnColors: string[];
+
 	showCoverImages: boolean;
 	boardsPerRow: number;
 	customPluginName: string;
@@ -116,7 +116,7 @@ export interface PluginSettings {
 	// Smart Extract settings
 	useSmartExtract?: boolean;
 	openAIApiKey?: string;
-	openAIModel?: 'gpt-3.5-turbo' | 'gpt-4' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4.1' | 'gpt-4.1-mini' | 'gpt-4.1-nano' | 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'o3' | 'o3-mini' | 'o1' | 'o1-mini';
+	openAIModel?: 'gpt-3.5-turbo' | 'gpt-4' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-4o-mini';
 	smartExtractMaxTokens?: number;
 	smartExtractTemperature?: number;
 	useCustomPrompt?: boolean;
@@ -126,22 +126,11 @@ export interface PluginSettings {
 	cacheDurationHours?: number;
 }
 
-// Theme-aware color palettes
-// Neutral colors with subtle tints that work perfectly on BOTH light and dark backgrounds
-export const UNIVERSAL_COLORS = ['#E8E8E8', '#E0E8E0', '#E8E0E8', '#E8E8E0', '#E0E8E8'];
-export const LIGHT_THEME_COLORS = UNIVERSAL_COLORS;
-export const DARK_THEME_COLORS = UNIVERSAL_COLORS;
-/**
- * Get theme-appropriate column colors based on current Obsidian theme
- */
-export function getThemeAwareColors(): string[] {
-	// Return neutral colors with subtle tints that work perfectly on both light and dark backgrounds
-	return UNIVERSAL_COLORS;
-}
+
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	kanbanFolderPath: 'Kanban',
-	defaultColumnColors: LIGHT_THEME_COLORS,
+
 	showCoverImages: true,
 	boardsPerRow: 3,
 	customPluginName: 'Crystal Boards',
@@ -157,7 +146,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	// Smart Extract defaults
 	useSmartExtract: false,
 	openAIApiKey: '',
-	openAIModel: 'gpt-4.1-mini',
+	openAIModel: 'gpt-4o-mini',
 	smartExtractMaxTokens: 500,
 	smartExtractTemperature: 0.7,
 	useCustomPrompt: false,

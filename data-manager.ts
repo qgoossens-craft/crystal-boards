@@ -315,4 +315,49 @@ export class DataManager {
 			await this.updateBoard(board);
 		}
 	}
+
+	async moveColumnLeft(boardId: string, columnId: string): Promise<boolean> {
+		const board = this.getBoardById(boardId);
+		if (!board) return false;
+
+		const column = board.columns.find(col => col.id === columnId);
+		if (!column || column.position === 0) return false;
+
+		// Find the column to the left (lower position)
+		const columnToLeft = board.columns.find(col => col.position === column.position - 1);
+		if (!columnToLeft) return false;
+
+		// Swap positions
+		const originalPosition = column.position;
+		column.position = columnToLeft.position;
+		columnToLeft.position = originalPosition;
+
+		// Sort columns by position
+		board.columns.sort((a, b) => a.position - b.position);
+		await this.updateBoard(board);
+		return true;
+	}
+
+	async moveColumnRight(boardId: string, columnId: string): Promise<boolean> {
+		const board = this.getBoardById(boardId);
+		if (!board) return false;
+
+		const column = board.columns.find(col => col.id === columnId);
+		const maxPosition = board.columns.length - 1;
+		if (!column || column.position === maxPosition) return false;
+
+		// Find the column to the right (higher position)
+		const columnToRight = board.columns.find(col => col.position === column.position + 1);
+		if (!columnToRight) return false;
+
+		// Swap positions
+		const originalPosition = column.position;
+		column.position = columnToRight.position;
+		columnToRight.position = originalPosition;
+
+		// Sort columns by position
+		board.columns.sort((a, b) => a.position - b.position);
+		await this.updateBoard(board);
+		return true;
+	}
 }

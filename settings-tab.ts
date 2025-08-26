@@ -44,28 +44,7 @@ export class CrystalBoardsSettingTab extends PluginSettingTab {
 				.setDynamicTooltip()
 				.onChange(async (value) => {
 					await this.plugin.updateSettings({ boardsPerRow: value });
-				}));
-
-		// Color presets section
-		containerEl.createEl('h3', { text: 'Default Column Colors' });
-		containerEl.createEl('p', { 
-			text: 'These colors will be used for new columns when creating boards.',
-			cls: 'setting-item-description'
-		});
-
-		this.plugin.settings.defaultColumnColors.forEach((color, index) => {
-			new Setting(containerEl)
-				.setName(`Color ${index + 1}`)
-				.addColorPicker(colorPicker => colorPicker
-					.setValue(color)
-					.onChange(async (value) => {
-						const newColors = [...this.plugin.settings.defaultColumnColors];
-						newColors[index] = value;
-						await this.plugin.updateSettings({ defaultColumnColors: newColors });
-					}));
-		});
-
-		// Task extraction section
+				}));// Task extraction section
 		containerEl.createEl('h3', { text: 'Task Extraction' });
 		containerEl.createEl('p', { 
 			text: 'Configure automatic task extraction from your notes into boards.',
@@ -222,22 +201,12 @@ export class CrystalBoardsSettingTab extends PluginSettingTab {
 			.setName('AI Model')
 			.setDesc('Choose the OpenAI model to use')
 			.addDropdown(dropdown => dropdown
-				.addOption('gpt-4.1-mini', 'GPT-4.1 Mini (Recommended - Fast & Smart)')
-				.addOption('gpt-4.1', 'GPT-4.1 (Smartest non-reasoning model)')
-				.addOption('gpt-4.1-nano', 'GPT-4.1 Nano (Fastest, most cost-efficient)')
-				.addOption('gpt-5-mini', 'GPT-5 Mini (Fast, cost-efficient version of GPT-5)')
-				.addOption('gpt-5', 'GPT-5 (Best for coding and agentic tasks)')
-				.addOption('gpt-5-nano', 'GPT-5 Nano (Fastest, most cost-efficient GPT-5)')
-				.addOption('o3-mini', 'o3-mini (Small reasoning model)')
-				.addOption('o3', 'o3 (Reasoning model for complex tasks)')
-				.addOption('gpt-4o', 'GPT-4o (Fast, intelligent, flexible)')
-				.addOption('gpt-4o-mini', 'GPT-4o Mini (Fast, affordable small model)')
+				.addOption('gpt-4o', 'GPT-4o (Recommended - Fast & intelligent)')
+				.addOption('gpt-4o-mini', 'GPT-4o Mini (Fast, affordable)')
 				.addOption('gpt-4-turbo', 'GPT-4 Turbo (High intelligence)')
 				.addOption('gpt-4', 'GPT-4 (Classic high-intelligence)')
 				.addOption('gpt-3.5-turbo', 'GPT-3.5 Turbo (Legacy, cheaper)')
-				.addOption('o1', 'o1 (Previous reasoning model)')
-				.addOption('o1-mini', 'o1-mini (Small reasoning alternative)')
-				.setValue(this.plugin.settings.openAIModel || 'gpt-4.1-mini')
+				.setValue(this.plugin.settings.openAIModel || 'gpt-4o-mini')
 				.onChange(async (value: any) => {
 					await this.plugin.updateSettings({ openAIModel: value });
 				}));

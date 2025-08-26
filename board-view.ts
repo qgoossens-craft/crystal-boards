@@ -482,6 +482,46 @@ export class BoardView extends ItemView {
 
 		const columnActions = headerEl.createEl('div', { cls: 'crystal-column-actions' });
 		
+		// Get column position info for arrow button states
+		const sortedColumns = this.board.columns.sort((a, b) => a.position - b.position);
+		const currentIndex = sortedColumns.findIndex(col => col.id === column.id);
+		const isFirst = currentIndex === 0;
+		const isLast = currentIndex === sortedColumns.length - 1;
+		
+		// Move left arrow
+		const moveLeftBtn = columnActions.createEl('button', {
+			text: '←',
+			cls: `crystal-column-action-btn crystal-column-move-btn ${isFirst ? 'disabled' : ''}`,
+			attr: { 'aria-label': 'Move column left' }
+		});
+		moveLeftBtn.onclick = async (e) => {
+			e.stopPropagation();
+			if (!isFirst) {
+				const success = await this.plugin.dataManager.moveColumnLeft(this.board.id, column.id);
+				if (success) {
+					await this.refreshBoardData();
+				}
+			}
+		};
+		moveLeftBtn.disabled = isFirst;
+
+		// Move right arrow
+		const moveRightBtn = columnActions.createEl('button', {
+			text: '→',
+			cls: `crystal-column-action-btn crystal-column-move-btn ${isLast ? 'disabled' : ''}`,
+			attr: { 'aria-label': 'Move column right' }
+		});
+		moveRightBtn.onclick = async (e) => {
+			e.stopPropagation();
+			if (!isLast) {
+				const success = await this.plugin.dataManager.moveColumnRight(this.board.id, column.id);
+				if (success) {
+					await this.refreshBoardData();
+				}
+			}
+		};
+		moveRightBtn.disabled = isLast;
+
 		const editBtn = columnActions.createEl('button', {
 			text: '⚙️',
 			cls: 'crystal-column-action-btn',
@@ -490,6 +530,16 @@ export class BoardView extends ItemView {
 		editBtn.onclick = (e) => {
 			e.stopPropagation();
 			this.openEditColumnModal(column);
+		};
+
+		const bulkSelectBtn = columnActions.createEl('button', {
+			text: '☑️',
+			cls: 'crystal-column-action-btn crystal-column-bulk-btn',
+			attr: { 'aria-label': 'Select all cards in column' }
+		});
+		bulkSelectBtn.onclick = (e) => {
+			e.stopPropagation();
+			this.selectColumnCards(column.id);
 		};
 
 		const deleteBtn = columnActions.createEl('button', {
@@ -991,6 +1041,23 @@ export class BoardView extends ItemView {
 		this.renderBoard();
 	}
 
+	/**
+	 * Select all cards in a specific column
+	 */
+	selectColumnCards(columnId: string): void {
+		// Find the column
+		const column = this.board.columns.find(col => col.id === columnId);
+		if (!column) return;
+
+		// Add all card IDs from this column to selection
+		for (const card of column.cards) {
+			this.selectedCards.add(card.id);
+		}
+		
+		// Re-render to show selection state
+		this.renderBoard();
+	}
+
 	clearSelection(): void {
 		this.selectedCards.clear();
 		this.renderBoard();
@@ -1320,7 +1387,7 @@ class ColumnModal extends Modal {
 		this.column = column;
 		this.onSubmit = onSubmit;
 		this.columnName = column?.name || '';
-		this.columnColor = column?.color || this.plugin.settings.defaultColumnColors[0];
+		this.columnColor = column?.color || '#E8E8E8';
 	}
 
 	onOpen(): void {
@@ -1339,32 +1406,7 @@ class ColumnModal extends Modal {
 				text.inputEl.focus();
 			});
 
-		new Setting(contentEl)
-			.setName('Column Color')
-			.setDesc('Choose a background color for the column')
-			.addColorPicker((colorPicker) => {
-				colorPicker.setValue(this.columnColor)
-					.onChange((value) => {
-						this.columnColor = value;
-					});
-			});
 
-		// Color presets
-		const presetsContainer = contentEl.createEl('div', { cls: 'crystal-color-presets' });
-		presetsContainer.createEl('h4', { text: 'Color Presets' });
-		
-		const presetsGrid = presetsContainer.createEl('div', { cls: 'crystal-color-presets-grid' });
-		for (const color of this.plugin.settings.defaultColumnColors) {
-			const presetBtn = presetsGrid.createEl('button', {
-				cls: 'crystal-color-preset-btn'
-			});
-			presetBtn.style.backgroundColor = color;
-			presetBtn.onclick = () => {
-				this.columnColor = color;
-				// Update the color picker
-				contentEl.querySelector('input[type="color"]')?.setAttribute('value', color);
-			};
-		}
 
 		new Setting(contentEl)
 			.addButton((btn) => {

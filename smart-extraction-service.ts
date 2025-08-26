@@ -74,7 +74,7 @@ export class SmartExtractionService {
 		const settings = this.plugin.settings;
 		this.openAIService = new OpenAIService({
 			apiKey: settings.openAIApiKey || '',
-			model: settings.openAIModel || 'gpt-4.1-mini',
+			model: settings.openAIModel || 'gpt-4o-mini',
 			maxTokens: settings.smartExtractMaxTokens || 500,
 			temperature: settings.smartExtractTemperature || 0.7
 		});
@@ -251,7 +251,7 @@ export class SmartExtractionService {
 							columns: [{
 								id: `column-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 								name: this.plugin.settings.extractionColumnName || 'To Do',
-								color: this.plugin.settings.defaultColumnColors[0] || '#3b82f6',
+								color: '#E8E8E8',
 								position: 0,
 								cards: []
 							}],
@@ -1493,7 +1493,7 @@ export class SmartExtractionService {
 			// Rough cost estimation (tokens * model cost)
 			const estimatedTokensPerTask = 300; // rough estimate
 			const totalEstimatedTokens = extractedTasks.length * estimatedTokensPerTask;
-			const costPerMillion = 0.50; // rough estimate for gpt-4.1-mini
+			const costPerMillion = 0.50; // rough estimate for gpt-4o-mini
 			const estimatedCost = (totalEstimatedTokens / 1000000) * costPerMillion;
 
 			return {
@@ -1588,7 +1588,7 @@ export class SmartExtractionService {
 	 * Get cost per million tokens based on current model
 	 */
 	private getCostPerMillion(): number {
-		const model = this.plugin.settings.openAIModel || 'gpt-4.1-mini';
+		const model = this.plugin.settings.openAIModel || 'gpt-4o-mini';
 		
 		// Cost estimates (approximate, as of 2024)
 		const costs = {
@@ -1596,17 +1596,7 @@ export class SmartExtractionService {
 			'gpt-4': 30.00,
 			'gpt-4-turbo': 10.00,
 			'gpt-4o': 5.00,
-			'gpt-4o-mini': 0.15,
-			'gpt-4.1': 25.00,
-			'gpt-4.1-mini': 0.20,
-			'gpt-4.1-nano': 0.10,
-			'gpt-5': 50.00,
-			'gpt-5-mini': 1.00,
-			'gpt-5-nano': 0.25,
-			'o3': 60.00,
-			'o3-mini': 3.00,
-			'o1': 15.00,
-			'o1-mini': 3.00
+			'gpt-4o-mini': 0.15
 		};
 
 		return costs[model] || 1.00; // Default fallback

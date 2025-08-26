@@ -322,7 +322,7 @@ export class TaskExtractor {
 	 */
 	private createDefaultColumns(): Column[] {
 		const now = Date.now();
-		const colors = this.plugin.settings.defaultColumnColors;
+		const colors = ['#E8E8E8', '#E0E8E0', '#E8E0E8', '#E8E8E0', '#E0E8E8'];
 		
 		const defaultColumnNames = ['To Do', 'In Progress', 'Done'];
 		

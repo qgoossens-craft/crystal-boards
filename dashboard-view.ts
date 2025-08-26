@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, Modal, Setting, TFile, App, Notice } from 'obsidian';
 import CrystalBoardsPlugin from './main';
-import { Board, DASHBOARD_VIEW_TYPE, getThemeAwareColors } from './types';
+import { Board, DASHBOARD_VIEW_TYPE } from './types';
 
 export class DashboardView extends ItemView {
 	plugin: CrystalBoardsPlugin;
@@ -865,7 +865,7 @@ class CreateBoardModal extends Modal {
 			coverImage: this.coverImage || undefined,
 			position: 0, // Will be set properly in the callback
 			columns: (() => {
-					const colors = getThemeAwareColors();
+					const colors = ['#E8E8E8', '#E0E8E0', '#E8E0E8', '#E8E8E0', '#E0E8E8'];
 					return [
 						{
 							id: this.generateId(),
