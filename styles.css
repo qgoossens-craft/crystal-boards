@@ -760,7 +760,7 @@
 	/* Grid item - no flex needed, grid handles sizing */
 	min-width: 280px;
 	/* background: var(--background-primary); Commented out - colors handled by JS */
-	border: 1px solid var(--background-modifier-border);
+	border: 2px solid var(--background-modifier-border-hover);
 	border-radius: 8px;
 	padding: 1rem;
 	display: flex;
