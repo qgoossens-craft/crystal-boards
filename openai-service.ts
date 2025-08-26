@@ -329,6 +329,1073 @@ Guidelines:
 	/**
 	 * Update configuration
 	 */
+	/**
+	 * Analyze YouTube video content with specialized prompts
+	 */
+	/**
+	 * Analyze YouTube video using OpenAI Vision (GPT-4V) as primary method
+	 * This method extracts key frames from the video and uses vision models for analysis
+	 */
+	/**
+	 * Enhanced YouTube analysis using Innertube API for transcript extraction
+	 * This method gets actual transcript data and provides detailed, actionable insights
+	 */
+	async analyzeYouTubeVideoWithInnertube(params: {
+		videoId: string;
+		metadata: any;
+		task: string;
+		fallbackContent?: string;
+	}): Promise<TaskAnalysis & { keyTakeaways?: string[]; analysisMethod: string; transcript?: string }> {
+		const { videoId, metadata, task, fallbackContent } = params;
+		
+		console.log('[DEBUG] Starting Innertube API analysis for YouTube video');
+		
+		try {
+			// Step 1: Extract transcript using Innertube API
+			const transcriptData = await this.extractTranscriptViaInnertube(videoId);
+			
+			if (transcriptData && transcriptData.segments && transcriptData.segments.length > 0) {
+				console.log(`[DEBUG] Successfully extracted ${transcriptData.segments.length} transcript segments`);
+				
+				// Step 2: Analyze transcript with specialized AI prompts
+				const analysis = await this.analyzeTranscriptContent({
+					transcript: transcriptData.fullText,
+					segments: transcriptData.segments,
+					metadata,
+					task
+				});
+				
+				return {
+					...analysis,
+					analysisMethod: 'innertube_transcript',
+					transcript: transcriptData.fullText
+				};
+				
+			} else {
+				console.warn('[DEBUG] No transcript available via Innertube, falling back to rich content');
+				throw new Error('No transcript available');
+			}
+			
+		} catch (error) {
+			console.warn('[DEBUG] Innertube analysis failed:', error.message);
+			console.log('[DEBUG] Falling back to rich content analysis');
+			
+			// Fall back to existing rich content analysis
+			const fallbackAnalysis = await this.analyzeYouTubeVideo({
+				transcript: fallbackContent || '',
+				metadata: metadata || { title: null, channel: null },
+				task,
+				hasTranscript: false,
+				transcriptReason: 'Innertube extraction failed, using fallback method',
+				analysisType: 'rich_content',
+				contentRichness: metadata?.contentRichness || 2
+			});
+
+			return {
+				...fallbackAnalysis,
+				analysisMethod: 'fallback'
+			};
+		}
+	}
+
+	/**
+	 * Extract transcript using YouTube's Innertube API
+	 * Based on the 2025 working method using Android client spoofing
+	 */
+	private async extractTranscriptViaInnertube(videoId: string): Promise<{
+		fullText: string;
+		segments: Array<{
+			text: string;
+			startTime: number;
+			endTime: number;
+		}>;
+	} | null> {
+		try {
+			console.log(`[DEBUG] Extracting transcript via Innertube API for video: ${videoId}`);
+			
+			// Step 1: Get the INNERTUBE_API_KEY from the video page
+			const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+			// Use Obsidian's requestUrl to bypass CORS in Electron environment
+			const pageResponse = await (global as any).requestUrl({
+				url: videoUrl,
+				method: 'GET',
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+				}
+			});
+			
+			if (pageResponse.status !== 200) {
+				throw new Error(`Failed to fetch video page: ${pageResponse.status}`);
+			}
+			
+			const html = pageResponse.text;
+			const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
+			
+			if (!apiKeyMatch) {
+				throw new Error('INNERTUBE_API_KEY not found in page');
+			}
+			
+			const apiKey = apiKeyMatch[1];
+			console.log('[DEBUG] Successfully extracted Innertube API key');
+			
+			// Step 2: Call the player API with Android client context
+			const playerEndpoint = `https://www.youtube.com/youtubei/v1/player?key=${apiKey}`;
+			const playerBody = {
+				context: {
+					client: {
+						clientName: "ANDROID",
+						clientVersion: "20.10.38"
+					}
+				},
+				videoId: videoId
+			};
+			
+			const playerResponse = await (global as any).requestUrl({
+				url: playerEndpoint,
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 11) gzip'
+				},
+				body: JSON.stringify(playerBody)
+			});
+			
+			if (playerResponse.status !== 200) {
+				throw new Error(`Player API request failed: ${playerResponse.status}`);
+			}
+			
+			const playerData = playerResponse.json;
+			console.log('[DEBUG] Successfully called Innertube player API');
+			
+			// Step 3: Extract caption tracks
+			const tracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+			if (!tracks || tracks.length === 0) {
+				throw new Error('No caption tracks found in player response');
+			}
+			
+			// Find English track (or first available)
+			let track = tracks.find((t: any) => t.languageCode === 'en');
+			if (!track) {
+				track = tracks[0]; // Use first available language
+				console.log(`[DEBUG] English not available, using: ${track.languageCode}`);
+			}
+			
+			// Step 4: Fetch and parse the caption XML
+			let baseUrl = track.baseUrl;
+			// Remove fmt parameter if present to get raw XML
+			baseUrl = baseUrl.replace(/&fmt=\w+$/, '');
+			
+			console.log('[DEBUG] Fetching caption XML from:', baseUrl.substring(0, 100) + '...');
+			
+			const captionResponse = await (global as any).requestUrl({
+				url: baseUrl,
+				method: 'GET',
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+				}
+			});
+			
+			if (captionResponse.status !== 200) {
+				throw new Error(`Caption fetch failed: ${captionResponse.status}`);
+			}
+			
+			const xml = captionResponse.text;
+			console.log(`[DEBUG] Successfully fetched caption XML (${xml.length} characters)`);
+			
+			// Step 5: Parse XML and extract segments
+			return this.parseInnertubeTranscriptXML(xml);
+			
+		} catch (error) {
+			console.error('[DEBUG] Innertube transcript extraction failed:', error.message);
+			return null;
+		}
+	}
+
+	/**
+	 * Parse Innertube transcript XML into structured segments
+	 */
+	private parseInnertubeTranscriptXML(xml: string): {
+		fullText: string;
+		segments: Array<{
+			text: string;
+			startTime: number;
+			endTime: number;
+		}>;
+	} | null {
+		try {
+			// Extract text segments from XML
+			// Format: <text start="1.2" dur="2.5">Hello world</text>
+			const textMatches = xml.match(/<text[^>]*start="([^"]*)"[^>]*dur="([^"]*)"[^>]*>([^<]*)<\/text>/g);
+			
+			if (!textMatches || textMatches.length === 0) {
+				console.log('[DEBUG] No text segments found in XML');
+				return null;
+			}
+			
+			const segments = [];
+			let fullText = '';
+			
+			for (const match of textMatches) {
+				const segmentMatch = match.match(/<text[^>]*start="([^"]*)"[^>]*dur="([^"]*)"[^>]*>([^<]*)<\/text>/);
+				
+				if (segmentMatch) {
+					const startTime = parseFloat(segmentMatch[1]);
+					const duration = parseFloat(segmentMatch[2]);
+					const text = this.decodeHtmlEntities(segmentMatch[3].trim());
+					
+					if (text && text.length > 0) {
+						segments.push({
+							text: text,
+							startTime: startTime,
+							endTime: startTime + duration
+						});
+						fullText += (fullText ? ' ' : '') + text;
+					}
+				}
+			}
+			
+			console.log(`[DEBUG] Parsed ${segments.length} transcript segments, total text: ${fullText.length} characters`);
+			
+			return {
+				fullText: fullText,
+				segments: segments
+			};
+			
+		} catch (error) {
+			console.error('[DEBUG] Failed to parse Innertube XML:', error);
+			return null;
+		}
+	}
+
+	/**
+	 * Decode HTML entities in transcript text
+	 */
+	private decodeHtmlEntities(text: string): string {
+		const entityMap: { [key: string]: string } = {
+			'&amp;': '&',
+			'&lt;': '<',
+			'&gt;': '>',
+			'&quot;': '"',
+			'&#39;': "'",
+			'&apos;': "'"
+		};
+		
+		return text.replace(/&(?:amp|lt|gt|quot|#39|apos);/g, match => entityMap[match] || match);
+	}
+
+	/**
+	 * Analyze transcript content with intelligent, context-aware AI prompts
+	 * Provides specific, actionable insights based on video content type
+	 */
+	/**
+	 * Analyze transcript content with intelligent, context-aware AI prompts
+	 * Provides specific, actionable insights based on video content type
+	 */
+	private async analyzeTranscriptContent(params: {
+		transcript: string;
+		segments: Array<{ text: string; startTime: number; endTime: number }>;
+		metadata: any;
+		task: string;
+	}): Promise<TaskAnalysis & { keyTakeaways?: string[]; specificTools?: string[] }> {
+		const { transcript, segments, metadata, task } = params;
+		
+		// Detect video type for specialized analysis
+		const videoType = this.detectVideoType(transcript, metadata || {});
+		console.log(`[DEBUG] Detected video type: ${videoType}`);
+		
+		// Create context-specific prompt
+		const prompt = this.buildIntelligentPrompt(videoType, transcript, metadata || {}, task);
+		
+		try {
+			// Use Obsidian's requestUrl to avoid CORS issues
+			const response = await (global as any).requestUrl({
+				url: this.apiEndpoint,
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${this.config.apiKey}`,
+				},
+				body: JSON.stringify({
+					model: this.config.model,
+					messages: [
+						{
+							role: 'user',
+							content: prompt
+						}
+					],
+					max_tokens: Math.min(this.config.maxTokens, 2000),
+					temperature: 0.2, // Lower temperature for more factual, consistent responses
+				})
+			});
+
+			if (response.status !== 200) {
+				throw new Error(`OpenAI API error: ${response.status}`);
+			}
+
+			const data = response.json;
+			const content = data.choices[0].message.content;
+			
+			// Parse structured response
+			const parsedResponse = this.parseIntelligentResponse(content, videoType);
+			
+			// Generate topic-specific URLs if we have specific tools
+			let topicUrls: Array<{ url: string; title: string }> = [];
+			if (parsedResponse.specificTools && parsedResponse.specificTools.length > 0) {
+				topicUrls = await this.generateTopicSpecificUrls(
+					parsedResponse.specificTools, 
+					parsedResponse.keyTakeaways || []
+				);
+			}
+			
+			// Add topic URLs to suggested search queries
+			if (topicUrls.length > 0) {
+				const existingQueries = parsedResponse.suggestedSearchQueries || [];
+				const topicTitles = topicUrls.map(url => url.title);
+				parsedResponse.suggestedSearchQueries = [...existingQueries, ...topicTitles];
+			}
+			
+			return {
+				...parsedResponse,
+				topicUrls // Add this for use in the card generation
+			} as any;
+			
+		} catch (error) {
+			console.error('[DEBUG] Intelligent analysis failed:', error);
+			// Fallback to basic analysis
+			return {
+				context: `YouTube Video - ${videoType} Analysis`,
+				description: this.truncateAtSentenceEnd(`Analysis of ${(metadata || {}).title || 'YouTube video'} transcript. ${transcript}`, 2000),
+				nextSteps: ['Review the full transcript', 'Watch key sections of the video', 'Research related topics'],
+				suggestedSearchQueries: [`${(metadata || {}).title || 'video topic'} tutorial`, `${(metadata || {}).channel || 'channel'} similar videos`],
+				keyTakeaways: [],
+				specificTools: []
+			};
+		}
+	}
+
+	/**
+	 * Detect video type based on transcript content and metadata
+	 */
+	private detectVideoType(transcript: string, metadata: any): string {
+		const text = (transcript + ' ' + ((metadata || {}).title || '') + ' ' + ((metadata || {}).description || '')).toLowerCase();
+		
+		// Technical tutorials
+		if (text.match(/(tutorial|how to|step by step|install|setup|configure|guide)/)) {
+			if (text.match(/(terminal|command|cli|bash|shell|code|programming|development)/)) {
+				return 'technical_tutorial';
+			}
+			return 'tutorial';
+		}
+		
+		// Lectures and educational content
+		if (text.match(/(lecture|course|lesson|learn|education|explain|concept|theory)/)) {
+			return 'educational';
+		}
+		
+		// Reviews and comparisons
+		if (text.match(/(review|comparison|vs|better|worse|pros|cons|recommend)/)) {
+			return 'review';
+		}
+		
+		// Presentations and talks
+		if (text.match(/(presentation|talk|conference|keynote|demo|show)/)) {
+			return 'presentation';
+		}
+		
+		// News and updates
+		if (text.match(/(news|update|announcement|release|breaking|latest)/)) {
+			return 'news';
+		}
+		
+		return 'general';
+	}
+
+	/**
+	 * Build intelligent, context-aware prompts based on video type
+	 */
+	/**
+	 * Build intelligent, context-aware prompts based on video type
+	 */
+	private buildIntelligentPrompt(videoType: string, transcript: string, metadata: any, task: string): string {
+		const baseInfo = `
+Video: ${(metadata || {}).title || 'YouTube Video'}
+Channel: ${(metadata || {}).channel || 'Unknown'}
+User's Interest: ${task}
+Duration: ${(metadata || {}).duration || 'Unknown'}
+
+Transcript:
+${transcript.length > 8000 ? transcript.substring(0, 8000) + '...' : transcript}
+`;
+
+		const formattingInstructions = `
+
+FORMATTING REQUIREMENTS:
+- Use proper markdown formatting with headers, bullet points, and spacing
+- Structure content with clear sections and line breaks
+- Use bullet points (•) for lists and sub-points (◦) for nested items
+- Add appropriate spacing between sections
+- Make content scannable and well-organized
+- Keep sentences complete - never cut off mid-sentence
+- Use code blocks (\`code\`) for commands, file paths, and technical terms
+- Use **bold** for emphasis on important tools, concepts, or actions`;
+
+		switch (videoType) {
+			case 'technical_tutorial':
+				return `${baseInfo}${formattingInstructions}
+
+This appears to be a technical tutorial. Extract and format the following information:
+
+1. **Prerequisites**: What tools, software, or knowledge is needed?
+2. **Step-by-Step Process**: List each major step with key commands/actions
+3. **Commands/Code**: Extract any terminal commands, code snippets, or configuration files mentioned
+4. **Tools & Technologies**: Identify specific tools, libraries, frameworks, or technologies mentioned
+5. **Troubleshooting**: Any common issues or solutions mentioned?
+6. **Key Concepts**: Important technical terms or concepts explained
+7. **Follow-up Resources**: Related tools, documentation, or next steps mentioned
+
+Provide a JSON response with this structure:
+{
+	"description": "Well-formatted technical summary using markdown with proper spacing, bullet points, and clear sections. Structure as:\n\n## Overview\n[Brief overview paragraph]\n\n## Key Steps\n• Step 1: [description]\n• Step 2: [description]\n\n## Important Commands\n• \`command-here\`: Purpose/explanation\n• \`another-command\`: Purpose/explanation\n\n## Prerequisites\n• Tool/requirement 1\n• Tool/requirement 2",
+	"keyTakeaways": ["specific technical insights with tool names", "important commands or configurations", "key concepts and best practices"],
+	"nextSteps": ["actionable steps with specific commands or actions", "research specific tools mentioned", "explore advanced techniques"],
+	"suggestedSearchQueries": ["specific technical terms for documentation", "tool combinations mentioned", "advanced tutorials"],
+	"specificTools": ["tool1", "tool2", "library/framework", "technology"],
+	"commands": ["exact commands shown", "configuration examples"],
+	"troubleshooting": ["common issues mentioned", "solutions provided"],
+	"urls": ["relevant documentation URLs", "tool websites", "tutorial resources"]
+}`;
+
+			case 'tutorial':
+				return `${baseInfo}${formattingInstructions}
+
+This is an instructional tutorial. Focus on extracting and formatting:
+
+1. **Learning Objectives**: What will users accomplish?
+2. **Materials/Requirements**: What's needed to follow along?
+3. **Process Breakdown**: Clear step-by-step instructions
+4. **Tools & Resources**: Specific tools, software, or resources mentioned
+5. **Tips and Best Practices**: Expert advice shared
+6. **Common Mistakes**: Pitfalls to avoid
+
+JSON Response:
+{
+	"description": "Comprehensive tutorial summary with clear formatting:\n\n## What You'll Learn\n[Learning objectives]\n\n## Requirements\n• Requirement 1\n• Requirement 2\n\n## Step-by-Step Process\n• **Step 1**: Detailed description\n• **Step 2**: Detailed description\n\n## Key Tips\n• Important tip 1\n• Important tip 2",
+	"keyTakeaways": ["main skills learned with specific tools", "important techniques and methods", "best practices and expert tips"],
+	"nextSteps": ["specific actions to practice with named tools", "next level skills to learn", "additional resources to explore"],
+	"suggestedSearchQueries": ["related tutorials for specific tools", "advanced techniques", "practice resources"],
+	"specificTools": ["specific tools mentioned", "software/apps", "resources"],
+	"requirements": ["materials needed", "skill prerequisites"],
+	"process": ["formatted step descriptions"]
+}`;
+
+			case 'educational':
+				return `${baseInfo}${formattingInstructions}
+
+This is educational content. Extract and format:
+
+1. **Key Concepts**: Main ideas and theories presented
+2. **Examples**: Concrete examples used to illustrate points
+3. **Applications**: Real-world uses of the information
+4. **Tools & References**: Specific tools, studies, or resources mentioned
+5. **Further Study**: Suggested topics for deeper learning
+
+JSON Response:
+{
+	"description": "Educational content summary with structured formatting:\n\n## Core Concepts\n• **Concept 1**: Clear explanation\n• **Concept 2**: Clear explanation\n\n## Key Examples\n• Example demonstrating concept A\n• Example demonstrating concept B\n\n## Practical Applications\n• Real-world application 1\n• Real-world application 2",
+	"keyTakeaways": ["core concepts with specific examples", "important principles and theories", "memorable examples and case studies"],
+	"nextSteps": ["topics to study further with specific focus", "practical applications to try", "tools or methods to explore"],
+	"suggestedSearchQueries": ["deeper concept research", "academic sources", "practical applications"],
+	"specificTools": ["research tools mentioned", "software/platforms", "methodologies"],
+	"concepts": ["concept explanations"],
+	"examples": ["concrete examples provided"]
+}`;
+
+			case 'review':
+				return `${baseInfo}${formattingInstructions}
+
+This is a review or comparison. Extract and format:
+
+1. **Products/Topics Reviewed**: What's being evaluated?
+2. **Criteria**: What aspects are being judged?
+3. **Pros and Cons**: Specific advantages and disadvantages
+4. **Specific Tools/Features**: Named tools, features, or specifications mentioned
+5. **Recommendations**: Final verdict and who it's for
+6. **Alternatives**: Other options mentioned
+
+JSON Response:
+{
+	"description": "Detailed review summary with clear structure:\n\n## What's Being Reviewed\n[Product/service overview]\n\n## Key Strengths\n• Strength 1 with specific details\n• Strength 2 with specific details\n\n## Notable Weaknesses\n• Weakness 1 with context\n• Weakness 2 with context\n\n## Final Verdict\n[Recommendation with reasoning]",
+	"keyTakeaways": ["main verdict with specific reasoning", "key strengths with details", "notable weaknesses and limitations"],
+	"nextSteps": ["decision-making actions", "alternatives to research", "specific features to investigate"],
+	"suggestedSearchQueries": ["product comparisons with specific models", "user reviews and experiences", "alternative options"],
+	"specificTools": ["products/services reviewed", "competitors mentioned", "related tools"],
+	"pros": ["detailed advantages"],
+	"cons": ["detailed disadvantages"],
+	"recommendation": "final verdict with reasoning"
+}`;
+
+			default:
+				return `${baseInfo}${formattingInstructions}
+
+Analyze this video content and provide specific, well-formatted insights:
+
+1. **Main Topic**: What is this video primarily about?
+2. **Key Information**: Most important facts or insights shared
+3. **Actionable Advice**: Concrete steps or recommendations given
+4. **Tools & Resources**: Specific tools, websites, books, people, or technologies mentioned
+5. **Resources Mentioned**: Tools, websites, books, or people referenced
+
+JSON Response:
+{
+	"description": "Comprehensive summary with proper formatting:\n\n## Overview\n[Clear overview paragraph]\n\n## Key Points\n• Important point 1 with specifics\n• Important point 2 with specifics\n• Important point 3 with specifics\n\n## Actionable Insights\n• Specific action 1\n• Specific action 2\n\n## Resources & Tools\n• **Tool/Resource 1**: Brief description\n• **Tool/Resource 2**: Brief description",
+	"keyTakeaways": ["important insights with specific details", "practical advice with context", "key facts and discoveries"],
+	"nextSteps": ["specific actions to take with named tools", "resources to explore further", "follow-up research topics"],
+	"suggestedSearchQueries": ["specific tools and technologies", "deeper research topics", "practical applications"],
+	"specificTools": ["tools mentioned", "technologies referenced", "resources cited"]
+}`;
+		}
+	}
+
+	/**
+	 * Parse the intelligent AI response with robust error handling
+	 */
+	/**
+	 * Parse the intelligent AI response with robust error handling
+	 */
+	private parseIntelligentResponse(content: string, videoType: string): TaskAnalysis & { 
+		keyTakeaways?: string[]; 
+		specificTools?: string[];
+		commands?: string[];
+		troubleshooting?: string[];
+		urls?: string[];
+	} {
+		try {
+			// Try to extract JSON from the response
+			const jsonMatch = content.match(/\{[\s\S]*\}/);
+			let parsedResponse;
+			
+			if (jsonMatch) {
+				try {
+					parsedResponse = JSON.parse(jsonMatch[0]);
+				} catch (parseError) {
+					console.warn('[DEBUG] Failed to parse JSON, trying manual extraction');
+					parsedResponse = this.extractResponseFields(content);
+				}
+			} else {
+				parsedResponse = this.extractResponseFields(content);
+			}
+			
+			// Ensure description is properly truncated at sentence boundaries
+			const rawDescription = parsedResponse.description || content.substring(0, 2000);
+			const formattedDescription = this.truncateAtSentenceEnd(rawDescription, 3000);
+			
+			return {
+				context: `YouTube Video - Advanced ${videoType} Analysis`,
+				description: formattedDescription,
+				keyTakeaways: parsedResponse.keyTakeaways || [],
+				nextSteps: parsedResponse.nextSteps || ['Review the video content', 'Research related topics'],
+				suggestedSearchQueries: parsedResponse.suggestedSearchQueries || [],
+				specificTools: parsedResponse.specificTools || [],
+				commands: parsedResponse.commands || [],
+				troubleshooting: parsedResponse.troubleshooting || [],
+				urls: parsedResponse.urls || []
+			};
+			
+		} catch (error) {
+			console.error('[DEBUG] Response parsing failed:', error);
+			const fallbackDescription = this.truncateAtSentenceEnd(content, 2000);
+			
+			return {
+				context: `YouTube Video - ${videoType} Analysis`,
+				description: fallbackDescription,
+				keyTakeaways: [],
+				nextSteps: ['Review the video content'],
+				suggestedSearchQueries: [],
+				specificTools: [],
+				commands: [],
+				troubleshooting: [],
+				urls: []
+			};
+		}
+	}
+
+	/**
+	 * Manual field extraction when JSON parsing fails
+	 */
+	private extractResponseFields(content: string): any {
+		const result: any = {};
+		
+		// Extract description
+		const descMatch = content.match(/description["\s:]*([^"]*(?:"[^"]*"[^"]*)*[^"]*)/i);
+		if (descMatch) {
+			result.description = descMatch[1].substring(0, 800);
+		}
+		
+		// Extract arrays using regex patterns
+		const extractArray = (fieldName: string): string[] => {
+			const pattern = new RegExp(`${fieldName}[\\s\\S]*?\\[([\\s\\S]*?)\\]`, 'i');
+			const match = content.match(pattern);
+			if (match) {
+				return match[1]
+					.split(/[,\n]/)
+					.map(item => item.replace(/^[\s"]*|[\s"]*$/g, ''))
+					.filter(item => item.length > 0)
+					.slice(0, 5); // Limit to 5 items
+			}
+			return [];
+		};
+		
+		result.keyTakeaways = extractArray('keyTakeaways');
+		result.nextSteps = extractArray('nextSteps');
+		result.suggestedSearchQueries = extractArray('suggestedSearchQueries');
+		
+		return result;
+	}
+
+	/**
+	 * Generate topic-specific URLs based on tools and technologies mentioned
+	 */
+	private async generateTopicSpecificUrls(specificTools: string[], keyTakeaways: string[]): Promise<Array<{ url: string; title: string }>> {
+		const urls: Array<{ url: string; title: string }> = [];
+		
+		// Common tool URL mappings
+		const toolUrlMap: { [key: string]: { url: string; title: string } } = {
+			// Terminal/CLI Tools
+			'fzf': { url: 'https://github.com/junegunn/fzf', title: 'fzf - Command-line fuzzy finder' },
+			'bat': { url: 'https://github.com/sharkdp/bat', title: 'bat - A cat clone with syntax highlighting' },
+			'ripgrep': { url: 'https://github.com/BurntSushi/ripgrep', title: 'ripgrep - Fast text search tool' },
+			'rg': { url: 'https://github.com/BurntSushi/ripgrep', title: 'ripgrep - Fast text search tool' },
+			'exa': { url: 'https://github.com/ogham/exa', title: 'exa - Modern replacement for ls' },
+			'fd': { url: 'https://github.com/sharkdp/fd', title: 'fd - Simple, fast find alternative' },
+			'zoxide': { url: 'https://github.com/ajeetdsouza/zoxide', title: 'zoxide - Smarter cd command' },
+			'starship': { url: 'https://starship.rs/', title: 'Starship - Cross-shell prompt' },
+			'tmux': { url: 'https://github.com/tmux/tmux/wiki', title: 'tmux - Terminal multiplexer' },
+			'neovim': { url: 'https://neovim.io/', title: 'Neovim - Hyperextensible Vim-based text editor' },
+			'nvim': { url: 'https://neovim.io/', title: 'Neovim - Hyperextensible Vim-based text editor' },
+			'vim': { url: 'https://www.vim.org/', title: 'Vim - Text editor' },
+			'zsh': { url: 'https://www.zsh.org/', title: 'Zsh - Extended Bourne shell' },
+			'fish': { url: 'https://fishshell.com/', title: 'Fish - Smart and user-friendly command line shell' },
+			'git': { url: 'https://git-scm.com/', title: 'Git - Version control system' },
+			'docker': { url: 'https://docs.docker.com/', title: 'Docker - Containerization platform' },
+			'kubernetes': { url: 'https://kubernetes.io/', title: 'Kubernetes - Container orchestration' },
+			'k8s': { url: 'https://kubernetes.io/', title: 'Kubernetes - Container orchestration' },
+			
+			// Fonts
+			'iosevka': { url: 'https://typeof.net/Iosevka/', title: 'Iosevka - Versatile typeface for code' },
+			'jetbrains mono': { url: 'https://www.jetbrains.com/lp/mono/', title: 'JetBrains Mono - Developer font' },
+			'fira code': { url: 'https://github.com/tonsky/FiraCode', title: 'Fira Code - Font with programming ligatures' },
+			'cascadia code': { url: 'https://github.com/microsoft/cascadia-code', title: 'Cascadia Code - Microsoft monospaced font' },
+			
+			// Development Tools
+			'vscode': { url: 'https://code.visualstudio.com/', title: 'Visual Studio Code - Code editor' },
+			'vs code': { url: 'https://code.visualstudio.com/', title: 'Visual Studio Code - Code editor' },
+			'sublime text': { url: 'https://www.sublimetext.com/', title: 'Sublime Text - Text editor' },
+			'atom': { url: 'https://atom.io/', title: 'Atom - Hackable text editor' },
+			'emacs': { url: 'https://www.gnu.org/software/emacs/', title: 'Emacs - Extensible text editor' },
+			'intellij': { url: 'https://www.jetbrains.com/idea/', title: 'IntelliJ IDEA - Java IDE' },
+			'pycharm': { url: 'https://www.jetbrains.com/pycharm/', title: 'PyCharm - Python IDE' },
+			
+			// Package Managers
+			'homebrew': { url: 'https://brew.sh/', title: 'Homebrew - macOS package manager' },
+			'brew': { url: 'https://brew.sh/', title: 'Homebrew - macOS package manager' },
+			'apt': { url: 'https://wiki.debian.org/Apt', title: 'APT - Debian package manager' },
+			'yum': { url: 'https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/deployment_guide/ch-yum', title: 'YUM - RPM package manager' },
+			'pacman': { url: 'https://wiki.archlinux.org/title/Pacman', title: 'Pacman - Arch Linux package manager' },
+			'npm': { url: 'https://www.npmjs.com/', title: 'npm - Node.js package manager' },
+			'yarn': { url: 'https://yarnpkg.com/', title: 'Yarn - JavaScript package manager' },
+			'pip': { url: 'https://pip.pypa.io/', title: 'pip - Python package installer' },
+			'cargo': { url: 'https://doc.rust-lang.org/cargo/', title: 'Cargo - Rust package manager' },
+			
+			// Programming Languages & Frameworks
+			'react': { url: 'https://reactjs.org/', title: 'React - JavaScript library for UI' },
+			'vue': { url: 'https://vuejs.org/', title: 'Vue.js - Progressive JavaScript framework' },
+			'angular': { url: 'https://angular.io/', title: 'Angular - Platform for building apps' },
+			'node': { url: 'https://nodejs.org/', title: 'Node.js - JavaScript runtime' },
+			'nodejs': { url: 'https://nodejs.org/', title: 'Node.js - JavaScript runtime' },
+			'python': { url: 'https://www.python.org/', title: 'Python - Programming language' },
+			'rust': { url: 'https://www.rust-lang.org/', title: 'Rust - Systems programming language' },
+			'go': { url: 'https://golang.org/', title: 'Go - Programming language by Google' },
+			'golang': { url: 'https://golang.org/', title: 'Go - Programming language by Google' },
+			'typescript': { url: 'https://www.typescriptlang.org/', title: 'TypeScript - Typed JavaScript' },
+			'javascript': { url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript', title: 'JavaScript - Programming language' },
+			'java': { url: 'https://www.oracle.com/java/', title: 'Java - Programming language' },
+			'c++': { url: 'https://isocpp.org/', title: 'C++ - Programming language' },
+			'c#': { url: 'https://docs.microsoft.com/en-us/dotnet/csharp/', title: 'C# - Programming language' },
+			'ruby': { url: 'https://www.ruby-lang.org/', title: 'Ruby - Programming language' },
+			'php': { url: 'https://www.php.net/', title: 'PHP - Server-side scripting language' },
+			'swift': { url: 'https://swift.org/', title: 'Swift - Programming language by Apple' },
+			'kotlin': { url: 'https://kotlinlang.org/', title: 'Kotlin - Modern programming language' },
+			
+			// Databases
+			'postgresql': { url: 'https://www.postgresql.org/', title: 'PostgreSQL - Advanced open source database' },
+			'mysql': { url: 'https://www.mysql.com/', title: 'MySQL - Open source database' },
+			'mongodb': { url: 'https://www.mongodb.com/', title: 'MongoDB - Document database' },
+			'redis': { url: 'https://redis.io/', title: 'Redis - In-memory data store' },
+			'sqlite': { url: 'https://www.sqlite.org/', title: 'SQLite - Embedded database' },
+			
+			// Cloud & Infrastructure
+			'aws': { url: 'https://aws.amazon.com/', title: 'AWS - Cloud computing services' },
+			'azure': { url: 'https://azure.microsoft.com/', title: 'Microsoft Azure - Cloud platform' },
+			'gcp': { url: 'https://cloud.google.com/', title: 'Google Cloud Platform - Cloud services' },
+			'terraform': { url: 'https://www.terraform.io/', title: 'Terraform - Infrastructure as code' },
+			'ansible': { url: 'https://www.ansible.com/', title: 'Ansible - Automation platform' },
+			
+			// Operating Systems
+			'linux': { url: 'https://www.kernel.org/', title: 'Linux - Open source operating system' },
+			'ubuntu': { url: 'https://ubuntu.com/', title: 'Ubuntu - Linux distribution' },
+			'debian': { url: 'https://www.debian.org/', title: 'Debian - Universal operating system' },
+			'centos': { url: 'https://www.centos.org/', title: 'CentOS - Enterprise-class Linux' },
+			'fedora': { url: 'https://getfedora.org/', title: 'Fedora - Linux distribution' },
+			'arch': { url: 'https://archlinux.org/', title: 'Arch Linux - Lightweight distribution' },
+			'macos': { url: 'https://www.apple.com/macos/', title: 'macOS - Apple operating system' },
+			'windows': { url: 'https://www.microsoft.com/windows/', title: 'Windows - Microsoft operating system' }
+		};
+		
+		// Extract tools from specificTools array and text content
+		const allTools = new Set<string>();
+		
+		// Add tools from the specificTools array
+		if (specificTools && Array.isArray(specificTools)) {
+			specificTools.forEach(tool => {
+				if (tool && typeof tool === 'string') {
+					allTools.add(tool.toLowerCase().trim());
+				}
+			});
+		}
+		
+		// Extract tools from keyTakeaways text
+		if (keyTakeaways && Array.isArray(keyTakeaways)) {
+			const textContent = keyTakeaways.join(' ').toLowerCase();
+			Object.keys(toolUrlMap).forEach(tool => {
+				if (textContent.includes(tool)) {
+					allTools.add(tool);
+				}
+			});
+		}
+		
+		// Generate URLs for matched tools
+		allTools.forEach(tool => {
+			const toolInfo = toolUrlMap[tool];
+			if (toolInfo) {
+				urls.push(toolInfo);
+			}
+		});
+		
+		// Remove duplicates and limit to 5 URLs
+		const uniqueUrls = urls.filter((url, index, self) => 
+			index === self.findIndex(u => u.url === url.url)
+		).slice(0, 5);
+		
+		console.log(`[DEBUG] Generated ${uniqueUrls.length} topic-specific URLs for tools:`, Array.from(allTools));
+		
+		return uniqueUrls;
+	}
+
+	/**
+	 * Smart text truncation that preserves complete sentences
+	 */
+	private truncateAtSentenceEnd(text: string, maxLength: number): string {
+		if (!text || text.length <= maxLength) {
+			return text;
+		}
+		
+		// Find the last complete sentence before maxLength
+		const truncated = text.substring(0, maxLength);
+		
+		// Look for sentence endings (., !, ?)
+		const sentenceEndings = /[.!?]\s/g;
+		let lastSentenceEnd = -1;
+		let match;
+		
+		while ((match = sentenceEndings.exec(truncated)) !== null) {
+			lastSentenceEnd = match.index + 1;
+		}
+		
+		// If we found a sentence ending, truncate there
+		if (lastSentenceEnd > maxLength * 0.7) { // Only if it's not too short (70% of maxLength)
+			return text.substring(0, lastSentenceEnd).trim();
+		}
+		
+		// Otherwise, look for the last complete word
+		const lastSpace = truncated.lastIndexOf(' ');
+		if (lastSpace > maxLength * 0.8) { // Only if it's not too short (80% of maxLength)
+			return text.substring(0, lastSpace).trim() + '...';
+		}
+		
+		// Fallback: hard truncate with ellipsis
+		return text.substring(0, maxLength - 3).trim() + '...';
+	}
+
+	/**
+	 * Generate YouTube thumbnail URLs for different moments in the video
+	 * YouTube provides several thumbnail options we can use for vision analysis
+	 */
+	private generateYouTubeThumbnails(videoId: string): string[] {
+		return [
+			// High quality default thumbnail (usually from middle of video)
+			`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+			// Alternative high quality
+			`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+			// Thumbnail from different moments (YouTube generates these automatically)
+			`https://img.youtube.com/vi/${videoId}/1.jpg`, // ~25% through video
+			`https://img.youtube.com/vi/${videoId}/2.jpg`, // ~50% through video  
+			`https://img.youtube.com/vi/${videoId}/3.jpg`, // ~75% through video
+		];
+	}
+
+	async analyzeYouTubeVideo(params: {
+		transcript: string;
+		metadata: any;
+		task: string;
+		hasTranscript: boolean;
+		transcriptReason?: string;
+		analysisType?: string;
+		contentRichness?: number;
+	}): Promise<TaskAnalysis & { keyTakeaways?: string[] }> {
+		const { transcript, metadata, task, hasTranscript, transcriptReason, analysisType, contentRichness } = params;
+		
+		let prompt = '';
+		let context = '';
+		
+		if (hasTranscript && analysisType === 'transcript') {
+			// Full transcript analysis (best case)
+			context = 'YouTube Video Analysis';
+			prompt = `Analyze this YouTube video transcript and generate a comprehensive summary with actionable insights.
+
+Video Title: ${metadata.title || 'Unknown'}
+Channel: ${metadata.channel || 'Unknown'}
+Duration: ${metadata.duration || 'Unknown'}
+Task Context: ${task}
+
+Transcript:
+${transcript}
+
+Please provide:
+1. A comprehensive summary (2-3 paragraphs) covering the main topics and key points
+2. 3-5 key takeaways or important points
+3. 3-5 actionable next steps based on the video content
+4. 2-3 search queries for further research on topics mentioned in the video
+
+IMPORTANT: Return ONLY valid JSON. Follow these rules:
+- Escape quotes inside strings as \\"
+- Replace newlines in strings with \\n  
+- Do not include any text before or after the JSON
+- Ensure all strings are properly terminated
+- Test that your JSON is valid before responding
+
+Format your response as JSON:
+{
+	"description": "comprehensive summary here",
+	"keyTakeaways": ["takeaway 1", "takeaway 2", "takeaway 3"],
+	"nextSteps": ["step 1", "step 2", "step 3"],
+	"suggestedSearchQueries": ["query 1", "query 2"]
+}`;
+		} else if (analysisType === 'rich_content' && (contentRichness || 0) >= 3) {
+			// Rich content analysis (good alternative)
+			context = `YouTube Video - Rich Content Analysis`;
+			prompt = `Analyze this YouTube video based on available rich content and generate actionable insights.
+
+Video Title: ${metadata.title || 'Unknown'}
+Channel: ${metadata.channel || 'Unknown'}
+Duration: ${metadata.duration || 'Unknown'}
+Task Context: ${task}
+
+Available Content:
+${transcript}
+
+Based on this rich content (video description, chapters, comments), please:
+1. Provide a comprehensive analysis (2-3 paragraphs) of what this video covers based on the available information
+2. Extract 3-5 key takeaways from the content provided
+3. Generate 3-5 actionable next steps that would be relevant for someone interested in this topic
+4. Suggest 2-3 research topics for further exploration
+
+Focus on the actual content provided rather than generic advice. Use the video description, chapter structure, and community insights to provide specific, relevant guidance.
+
+IMPORTANT: Return ONLY valid JSON. Follow these rules:
+- Escape quotes inside strings as \\"
+- Replace newlines in strings with \\n  
+- Do not include any text before or after the JSON
+- Ensure all strings are properly terminated
+- Test that your JSON is valid before responding
+
+Format your response as JSON:
+{
+	"description": "analysis based on available content",
+	"keyTakeaways": ["specific takeaway 1", "specific takeaway 2", "specific takeaway 3"],
+	"nextSteps": ["actionable step 1", "actionable step 2", "actionable step 3"],
+	"suggestedSearchQueries": ["related topic 1", "related topic 2"]
+}`;
+		} else {
+			// Basic metadata only (fallback)
+			context = `YouTube Video - ${transcriptReason || 'Limited Content Available'}`;
+			prompt = `Based on basic YouTube video metadata, provide practical guidance for manual analysis.
+
+Video Title: ${metadata.title || 'Unknown'}
+Channel: ${metadata.channel || 'Unknown'}
+Duration: ${metadata.duration || 'Unknown'}
+Views: ${metadata.viewCount || 'Unknown'}
+Task Context: ${task}
+Content Status: ${transcriptReason || 'Transcript and rich content not available'}
+
+Since detailed content is not available, provide:
+1. Context about what this video might cover based on the title and channel
+2. Specific steps for manual analysis (watching and note-taking strategies)
+3. Suggest what to look for while watching based on the title and context
+4. Recommend follow-up research topics related to the apparent subject matter
+
+Be explicit about limitations - clearly state what information you have vs. what would require watching the video.
+
+IMPORTANT: Return ONLY valid JSON. Follow these rules:
+- Escape quotes inside strings as \\"
+- Replace newlines in strings with \\n  
+- Do not include any text before or after the JSON
+- Ensure all strings are properly terminated
+- Test that your JSON is valid before responding
+
+Format your response as JSON:
+{
+	"description": "practical guidance for manual analysis",
+	"keyTakeaways": ["what to look for while watching", "analysis strategy", "key areas of focus"],
+	"nextSteps": ["Watch the video and take structured notes", "specific viewing strategy", "follow-up action"],
+	"suggestedSearchQueries": ["related topic 1", "related topic 2"]
+}`;
+		}
+		
+		try {
+			const response = await this.callOpenAI(prompt);
+			
+			// Robust JSON parsing with multiple fallback strategies
+			let parsed = null;
+			
+			try {
+				// First attempt: direct parsing
+				parsed = JSON.parse(response);
+			} catch (parseError1) {
+				console.log('[DEBUG] Direct JSON parse failed, trying cleanup:', parseError1.message);
+				
+				try {
+					// Second attempt: clean up common issues
+					let cleanedResponse = response
+						.replace(/[\r\n]+/g, ' ') // Replace newlines with spaces
+						.replace(/\t+/g, ' ') // Replace tabs with spaces  
+						.replace(/\s+/g, ' ') // Normalize whitespace
+						.trim();
+					
+					// Try to extract JSON from response if it has extra text
+					const jsonMatch = cleanedResponse.match(/\{.*\}/s);
+					if (jsonMatch) {
+						cleanedResponse = jsonMatch[0];
+					}
+					
+					parsed = JSON.parse(cleanedResponse);
+					console.log('[DEBUG] JSON cleanup successful');
+				} catch (parseError2) {
+					console.log('[DEBUG] JSON cleanup failed, trying manual extraction:', parseError2.message);
+					
+					try {
+						// Third attempt: manual field extraction using regex
+						const description = this.extractField(response, 'description');
+						const keyTakeaways = this.extractArrayField(response, 'keyTakeaways');
+						const nextSteps = this.extractArrayField(response, 'nextSteps');
+						const suggestedSearchQueries = this.extractArrayField(response, 'suggestedSearchQueries');
+						
+						if (description) {
+							parsed = {
+								description,
+								keyTakeaways: keyTakeaways || [],
+								nextSteps: nextSteps || [],
+								suggestedSearchQueries: suggestedSearchQueries || []
+							};
+							console.log('[DEBUG] Manual field extraction successful');
+						}
+					} catch (parseError3) {
+						console.log('[DEBUG] Manual extraction failed:', parseError3.message);
+					}
+				}
+			}
+			
+			if (parsed && parsed.description) {
+				return {
+					context,
+					description: parsed.description || 'Unable to generate summary',
+					nextSteps: Array.isArray(parsed.nextSteps) ? parsed.nextSteps : [],
+					suggestedSearchQueries: Array.isArray(parsed.suggestedSearchQueries) ? parsed.suggestedSearchQueries : [],
+					keyTakeaways: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : []
+				};
+			} else {
+				// Final fallback: use raw response as description
+				console.log('[DEBUG] Using raw response as fallback');
+				return {
+					context,
+					description: response.substring(0, 1000) + (response.length > 1000 ? '...' : ''),
+					nextSteps: this.getDefaultNextSteps(analysisType),
+					suggestedSearchQueries: [],
+					keyTakeaways: []
+				};
+			}
+		} catch (error) {
+			console.error('OpenAI YouTube analysis failed:', error);
+			throw new Error(`Failed to analyze YouTube video: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Get appropriate default next steps based on analysis type
+	 */
+	private getDefaultNextSteps(analysisType?: string): string[] {
+		switch (analysisType) {
+			case 'transcript':
+				return ['Review the transcript for key points', 'Research mentioned topics', 'Create summary notes'];
+			case 'rich_content':
+				return ['Review the video description thoroughly', 'Watch key chapters identified', 'Research topics mentioned in description'];
+			default:
+				return ['Watch the video and take detailed notes', 'Check video description for resources', 'Research the topic area'];
+		}
+	}
+
+	/**
+	 * Extract a string field from malformed JSON using regex
+	 */
+	/**
+	 * Extract a string field from malformed JSON using regex
+	 */
+	private extractField(text: string, fieldName: string): string | null {
+		const pattern = new RegExp(`"${fieldName}"\\s*:\\s*"([^"]*(?:\\\\.[^"]*)*)"`, 'i');
+		const match = text.match(pattern);
+		if (match) {
+			const rawText = match[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+			// Apply smart truncation to extracted fields
+			return this.truncateAtSentenceEnd(rawText, 3000);
+		}
+		return null;
+	}
+
+	/**
+	 * Extract an array field from malformed JSON using regex
+	 */
+	private extractArrayField(text: string, fieldName: string): string[] | null {
+		const pattern = new RegExp(`"${fieldName}"\\s*:\\s*\\[([^\\]]+)\\]`, 'i');
+		const match = text.match(pattern);
+		if (!match) return null;
+		
+		try {
+			// Extract items between quotes
+			const itemsText = match[1];
+			const items = [];
+			const itemPattern = /"([^"]*(?:\\.[^"]*)*)"/g;
+			let itemMatch;
+			
+			while ((itemMatch = itemPattern.exec(itemsText)) !== null) {
+				items.push(itemMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n'));
+			}
+			
+			return items.length > 0 ? items : null;
+		} catch (e) {
+			console.log('[DEBUG] Array extraction failed:', e.message);
+			return null;
+		}
+	}
+
 	updateConfig(config: Partial<OpenAIConfig>): void {
 		this.config = { ...this.config, ...config };
 	}

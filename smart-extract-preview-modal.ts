@@ -1,5 +1,4 @@
 import { Modal, Setting, Notice } from 'obsidian';
-import { Modal, Notice } from 'obsidian';
 import CrystalBoardsPlugin from './main';
 import { SmartCard, SmartExtractionPreview, SmartExtractApproval } from './smart-extraction-service';
 
@@ -137,7 +136,7 @@ export class SmartExtractPreviewModal extends Modal {
 			summaryEl.createEl('strong', { text: '🤖 AI Summary: ' });
 			summaryEl.createEl('p', { 
 				cls: 'ai-summary-text',
-				text: card.aiSummary.summary 
+				text: card.aiSummary.content 
 			});
 		}
 
@@ -151,7 +150,9 @@ export class SmartExtractPreviewModal extends Modal {
 			});
 			noteLink.onclick = () => {
 				// Open the linked note in Obsidian
-				this.plugin.app.workspace.openLinkText(card.linkedNote.path, '');
+				if (card.linkedNote) {
+					this.plugin.app.workspace.openLinkText(card.linkedNote.path, '');
+				}
 			};
 		}
 

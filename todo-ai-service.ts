@@ -136,7 +136,7 @@ export class TodoAIService {
 			if (!aiSummary && detectedUrls.length > 0) {
 				const primaryUrl = detectedUrls[0];
 				console.log('Getting AI summary for URL:', primaryUrl.url);
-				aiSummary = await this.getAISummaryForUrl(primaryUrl.url, todo.text);
+				aiSummary = (await this.getAISummaryForUrl(primaryUrl.url, todo.text)) || undefined;
 			} else if (aiSummary) {
 				console.log('Using existing AI summary from smart extract');
 			}
