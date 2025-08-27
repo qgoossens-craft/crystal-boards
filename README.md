@@ -4,62 +4,98 @@
 
 ![Crystal Boards Hero](https://img.shields.io/badge/Crystal%20Boards-AI%20Powered%20Kanban-8A2BE2?style=for-the-badge&logo=obsidian)
 
-**🚀 The Ultimate AI-Powered Kanban Plugin for Obsidian**
+**AI-Powered Kanban Plugin for Obsidian**
 
 *Transform any content into actionable tasks with the power of AI*
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat-square)](https://github.com/qgoossens-craft/crystal-boards)
 [![Obsidian Plugin](https://img.shields.io/badge/obsidian-plugin-8A2BE2?style=flat-square)](https://obsidian.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![Downloads](https://img.shields.io/badge/downloads-1K+-orange?style=flat-square)](#)
 
-[✨ Features](#-features) • [🚀 Installation](#-installation) • [🤖 AI Magic](#-ai-powered-smart-extract) • [📖 Usage](#-usage) • [⚙️ Configuration](#-configuration)
+
+[ Features](#-features) • [ Installation](#-installation) • [ AI Magic](#-ai-powered-smart-extract) • [ Usage](#-usage) • [ Configuration](#-configuration)
 
 </div>
 
 ---
 
-## 🌟 What Makes Crystal Boards Special?
+![alt text](image-1.png)
+
+## What is the Crystal Boards plugin ?
+
+I've built Crystal Boards to better fit my personal needs in Obsidian. I wasn't satisfied with the existing Kanban solutions (too focused on assignees,deadlines, importance tags,..) to be useful for me outside a work environment.
+
+I wanted a simple Kanban where I could triage my ideas and Brain Dump notes from my Obsidian.
+
+During it's development, I thought "Why not putting some AI in it ?"
+
+That's exactly what I did and it came out beautifully to be a research assistant with a Kanban on-top.
+
+I envisioned a tool that would not only help me organize my tasks but also enhance my creative process through intelligent suggestions and automation.
+
+I wanted to be able to dump my ideas and my research topics in my todo and have the AI help me organize and prioritize them right into my Kanban.
+
+## Currently we have 3 ways of using Crystal Boards :
+
+**1 - Using it as a simple Kanban**: You can perfectly use it as a simple Kanban to triage your ideas and todos.
+
+**2 - Using the native Extract feature**: By clicking on "Extract", Crystal Boards will automatically scan the associated note for tagged todos and triage them into the right Kanban Boards.
+
+**3 - Using the AI-powered Smart Extract feature** : This allows you to extract tasks from various sources like YouTube videos, Reddit posts, and web content seamlessly and triage the todos into your 
+
+---
+
+![alt text](image.png)
+
+---
+
 
 Crystal Boards isn't just another Kanban plugin - it's your **AI-powered productivity companion** that transforms any content into actionable workflows:
 
-- 🧠 **AI-Powered Smart Extract**: Convert YouTube videos, Reddit posts, and web content into organized tasks
-- 🎯 **Intelligent Task Processing**: GPT-powered analysis and enhancement
-- 🎨 **Beautiful Visual Interface**: Stunning dashboard with drag & drop functionality  
-- 📱 **Responsive Design**: Perfect on desktop and mobile
-- 🔗 **Deep Obsidian Integration**: Seamless note linking and vault integration
+-  **AI-Powered Smart Extract**: Convert YouTube videos, Reddit posts, and web content into organized tasks
+-  **Intelligent Task Processing**: GPT-powered analysis and enhancement
+-  **Beautiful Visual Interface**: Stunning dashboard with drag & drop functionality  
+-  **Responsive Design**: Perfect on desktop and mobile
+-  **Deep Obsidian Integration**: Seamless note linking and vault integration
 
-## ✨ Features
 
-### 🤖 **AI-Powered Smart Features**
-- **🎥 YouTube Transcript Analysis** - Extract actionable tasks from video content
-- **🔴 Reddit Content Intelligence** - Smart extraction from Reddit posts and discussions  
-- **🌐 URL Content Processing** - Automatic metadata and task generation from web content
-- **🧠 TodoAI Enhancement** - GPT-powered task processing and intelligent suggestions
-- **📊 Smart Categorization** - Automatic hashtag-based organization
+![alt text](image-4.png)
 
-### 📋 **Advanced Task Management**
-- **📁 Task Source Sync** - Auto-sync with external task files and monitoring
-- **🏷️ Hashtag Organization** - Smart filtering and categorization system
-- **🔗 Deep Note Integration** - Rich linking with preview and navigation
-- **⚡ Bulk Operations** - Select all cards in columns, mass editing
-- **🔄 Real-time Updates** - File watching and automatic board synchronization
+##  Features
 
-### 🎨 **Beautiful Interface**
-- **🖼️ Visual Dashboard** - Stunning grid layout with cover images
-- **🎭 Custom Themes** - Adapts to your Obsidian theme automatically
-- **📱 Responsive Design** - Perfect experience on any device
-- **✨ Smooth Animations** - Polished interactions and feedback
-- **🎯 Intuitive UX** - Drag & drop everything, visual feedback
+###  **AI-Powered Smart Features**
+- **YouTube Transcript Analysis** - Extract actionable tasks from video content
+- **Reddit Content Intelligence** - Smart extraction from Reddit posts and discussions  
+- **URL Content Processing** - Automatic metadata and task generation from web content
+- **TodoAI Enhancement** - GPT-powered task processing and intelligent suggestions
+- **Smart Categorization** - Automatic hashtag-based 
 
-### ⚡ **Power User Features**
-- **↔️ Column Reordering** - Move columns with arrow buttons
-- **☑️ Bulk Selection** - Select all cards in a column with one click
-- **🔍 Smart Loading** - Beautiful progress indicators for AI operations
-- **⌨️ Keyboard Shortcuts** - Efficient navigation and actions
-- **🎛️ Advanced Settings** - Fine-tune every aspect of your workflow
+![alt text](image-2.png)
 
-## 🚀 Installation
+###  **Advanced Task Management**
+- **Task Source Sync** - Auto-sync with external task files and monitoring
+- **Hashtag Organization** - Smart filtering and categorization system
+- **Deep Note Integration** - Rich linking with preview and navigation
+- **Bulk Operations** - Select all cards in columns, mass editing
+- **Real-time Updates** - File watching and automatic board synchronization
+
+### **Beautiful Interface**
+- **Visual Dashboard** - Stunning grid layout with cover images
+- **Custom Themes** - Adapts to your Obsidian theme automatically
+- **Responsive Design** - Perfect experience on any device
+- **Smooth Animations** - Polished interactions and feedback
+- **Intuitive UX** - Drag & drop everything, visual feedback
+
+### **Power User Features**
+- **Column Reordering** - Move columns with arrow buttons
+- **Bulk Selection** - Select all cards in a column with one click
+- **Smart Loading** - Beautiful progress indicators for AI operations
+- **⌨Keyboard Shortcuts** - Efficient navigation and actions
+- **Advanced Settings** - Fine-tune every aspect of your workflow
+
+![alt text](image-3.png)
+
+## Installation
 
 ### Method 1: Community Plugins (Coming Soon)
 1. Open Obsidian Settings
@@ -77,19 +113,19 @@ Crystal Boards isn't just another Kanban plugin - it's your **AI-powered product
 2. Add repository: `qgoossens-craft/crystal-boards`
 3. Enable Crystal Boards in Community Plugins
 
-## 🤖 AI-Powered Smart Extract
+## AI-Powered Smart Extract
 
 The crown jewel of Crystal Boards - transform any content into organized tasks with AI magic:
 
-### 🎥 YouTube Video Processing
+### YouTube Video Processing
 ```
-📺 Paste any YouTube URL
-🧠 AI extracts transcript and key points  
-📋 Generates actionable tasks automatically
-🏷️ Smart categorization with hashtags
+- Paste any YouTube URL
+- AI extracts transcript and key points  
+- Generates actionable tasks automatically
+- Smart categorization with hashtags
 ```
 
-### 🔴 Reddit Content Intelligence
+### Reddit Content Intelligence
 ```
 🔗 Paste Reddit post or comment URL
 📖 Extracts post content and discussions
@@ -97,7 +133,7 @@ The crown jewel of Crystal Boards - transform any content into organized tasks w
 📊 Organizes into structured tasks
 ```
 
-### 🌐 Web Content Analysis
+### Web Content Analysis
 ```
 🌍 Any web URL or article
 📄 Intelligent content extraction
@@ -105,7 +141,7 @@ The crown jewel of Crystal Boards - transform any content into organized tasks w
 ✨ Clean, organized task cards
 ```
 
-### ⚙️ AI Configuration
+### AI Configuration
 Support for multiple AI models:
 - **GPT-4o** (Recommended) - Fast & intelligent
 - **GPT-4o Mini** - Fast, affordable  
@@ -113,17 +149,17 @@ Support for multiple AI models:
 - **GPT-4** - Classic high-intelligence
 - **GPT-3.5 Turbo** - Legacy, cost-effective
 
-## 📖 Usage
+## Usage
 
-### 🚀 Quick Start
+### Quick Start
 
-1. **📋 Open Dashboard**: Click the Crystal Boards icon in the ribbon
-2. **➕ Create Board**: Click "Create Board" and name your project
-3. **🤖 Smart Extract**: Use the AI-powered extraction for instant task creation
-4. **🎯 Organize**: Drag & drop cards between columns
-5. **🔗 Link Notes**: Connect cards to your existing Obsidian notes
+1. **Open Dashboard**: Click the Crystal Boards icon in the ribbon
+2. **Create Board**: Click "Create Board" and name your project
+3. **Smart Extract**: Use the AI-powered extraction for instant task creation
+4. **Organize**: Drag & drop cards between columns
+5. **Link Notes**: Connect cards to your existing Obsidian notes
 
-### 🎯 Dashboard Magic
+### Dashboard Magic
 
 <table>
 <tr>
