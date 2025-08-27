@@ -331,12 +331,9 @@ export class SmartExtractionService {
 				debug: true, // Enable Readability debug mode
 				keepClasses: false
 			});
-			...`);
 			
 			const article = reader.parse();
-			
-			 + '...' || 'none'
-			});
+
 			
 			if (article) {
 				`);

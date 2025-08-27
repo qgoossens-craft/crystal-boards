@@ -109,9 +109,13 @@ Crystal Boards isn't just another Kanban plugin - it's your **AI-powered product
 3. Restart Obsidian and enable the plugin
 
 ### Method 3: BRAT (Beta Testing)
-1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin
-2. Add repository: `qgoossens-craft/crystal-boards`
-3. Enable Crystal Boards in Community Plugins
+1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) from Community Plugins
+2. Open BRAT settings in Obsidian
+3. Click "Add Beta plugin" and enter: `qgoossens-craft/crystal-boards`
+4. BRAT will automatically download and install the latest beta release
+5. Enable Crystal Boards in Settings → Community Plugins
+
+**Note**: BRAT installations automatically update to new beta releases when available.
 
 ## AI-Powered Smart Extract
 
