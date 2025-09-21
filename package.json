@@ -1,6 +1,6 @@
 {
 	"name": "Crystal Boards",
-	"version": "1.0.0-beta.1",
+	"version": "1.0.0-beta.2",
 	"description": "Personal Kanban boards with drag and drop functionality",
 	"main": "main.js",
 	"scripts": {
