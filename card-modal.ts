@@ -549,30 +549,30 @@ You can include:
 		resultsContainer.empty();
 
 		if (results.length === 0) {
-			resultsContainer.createEl('div', { 
-				text: 'No matching notes found', 
-				cls: 'crystal-search-status empty' 
+			resultsContainer.createEl('div', {
+				text: 'No matching notes found',
+				cls: 'crystal-search-status empty'
 			});
 			return;
 		}
 
 		const resultsEl = resultsContainer.createEl('div', { cls: 'crystal-simple-search-results' });
 
-		results.slice(0, 6).forEach((file, index) => {
+		results.slice(0, 6).forEach((result, index) => {
 			const resultEl = resultsEl.createEl('div', { cls: 'crystal-simple-search-result' });
-			
-			const titleEl = resultEl.createEl('div', { 
+
+			const titleEl = resultEl.createEl('div', {
 				cls: 'crystal-simple-result-title',
-				text: file.basename 
+				text: result.file.basename
 			});
-			
-			const pathEl = resultEl.createEl('div', { 
+
+			const pathEl = resultEl.createEl('div', {
 				cls: 'crystal-simple-result-path',
-				text: file.path 
+				text: result.file.path
 			});
-			
+
 			resultEl.addEventListener('click', () => {
-				this.addSimpleNoteLink(file, section);
+				this.addSimpleNoteLink(result.file, section);
 			});
 
 			// Store index for keyboard navigation
